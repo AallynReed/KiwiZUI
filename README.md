@@ -91,12 +91,15 @@ controls draw everything themselves and embed no fonts — Iggy provides Open Sa
 of the client's own `ui\fonts\`, so a screen built on this is a few kilobytes rather
 than a few hundred.
 
-## Credit
+## Contributing
 
-If you use this, a line in your mod's description is enough. If you find something
-Iggy does that is not written down here, a pull request against `docs/` is worth more
-than the code.
+Take it, change it, ship it. No credit needed and none wanted — the point of writing it
+down was to stop the next person losing six restarts to the same bug.
+
+If you find something Iggy does that is not written down here, a pull request against
+`docs/` is worth more than anything else you could send back.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+[MIT-0](LICENSE). MIT with the attribution clause removed, so there is nothing to
+carry into your own build.
