@@ -271,6 +271,24 @@ game is concerned, and the player keeps the mod.
 
 ---
 
+## Half a screen lays out and the rest piles up in one corner
+
+Iggy throws on reading a property an object does not have. The standalone player hands
+back `undefined`, so the harness is silent and the game is not.
+
+That makes an object literal a contract. `Legacy.parse` built its record without
+`readme`, which `Hub.ours` always sets; `Manager.paint` read `record.readme` between
+placing the close button and placing the readme button, and everything from that line on
+- the second button, the mod list, the whole row layout - simply did not run. What you
+see is the half that got done, and no error anywhere.
+
+Two things follow. Every builder of a shared record sets **every** field, including the
+ones its format has nothing to say about. And a paint routine settles positions before it
+draws, so a throw costs one row's appearance rather than the position of every row after
+it - which is what makes the difference visible enough to locate.
+
+---
+
 ## The lesson under most of these
 
 Build the out-of-game harness first. Animate ships a debug player that runs the SWF with

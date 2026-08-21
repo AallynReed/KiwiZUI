@@ -172,7 +172,10 @@ package ui
             this.caption.x = 0;
             return;
          }
-         span = wide + MARGIN + this.caption.textWidth;
+         /* A button carrying only a mark is the mark centred, with no gap held for a
+            word that is not there - which is what a strip of icon tabs is. */
+         span = this.caption.text.length == 0 ? wide
+                                              : wide + MARGIN + this.caption.textWidth;
          left = (this.w - span) / 2;
          if(this.art != null)
          {

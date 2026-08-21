@@ -105,6 +105,8 @@ package ui
 
       private var reading:Boolean = false;
 
+      private var reported:Boolean = false;
+
       /** What was on screen before this opened, put back when it closes. This fills the
        *  window, so the host's own content underneath costs legibility and buys
        *  nothing - none of it shows and none of it can be reached. */
@@ -140,9 +142,12 @@ package ui
          this.readField.multiline = true;
          this.body.addChild(this.readField);
          this.pickClip.addChild(this.picks);
+         this.pickClip.y = HEAD + PAD;
          this.panel.addChild(this.pickClip);
          this.panel.addChild(this.pickRail);
          this.clip.addChild(this.body);
+         this.clip.x = LEFT + PAD;
+         this.clip.y = HEAD + PAD;
          this.panel.addChild(this.clip);
          this.panel.addChild(this.rail);
          this.panel.addEventListener(MouseEvent.MOUSE_WHEEL,this.onWheel);
@@ -323,7 +328,6 @@ package ui
          {
             this.parent.removeChild(this);
          }
-         dispatchEvent(new Event(Event.CLOSE));
       }
 
       /** The rows are thrown away and made again whenever the selection changes. A
@@ -525,8 +529,31 @@ package ui
          this.readBtn.on = this.reading;
          this.readBtn.paint();
 
-         this.paintPicks();
-         this.paintRows();
+         this.guard(this.paintPicks,"picks");
+         this.guard(this.paintRows,"rows");
+      }
+
+      /** A screen inside Iggy cannot be attached to and a throw in a repaint leaves no
+       *  trace in any log, so the half of paint() that failed says so through the config
+       *  file - the one channel out that survives.
+       *
+       *  Once, and never again. A write per repaint is the spam that kills a screen, and
+       *  the second failure is the same failure as the first. */
+      private function guard(step:Function, tag:String) : void
+      {
+         try
+         {
+            step();
+         }
+         catch(err:Error)
+         {
+            if(!this.reported)
+            {
+               this.reported = true;
+               Hub.write(Hub.ADDRESS,"lasterror",
+                         tag + " " + err.errorID + " " + err.name + ": " + err.message);
+            }
+         }
       }
 
       private function paintPicks() : void
@@ -580,7 +607,6 @@ package ui
          var run:int = 0;
          this.pickScroll = Config.clamp(this.pickScroll,0,
                                         Math.max(0,this.picksDeep - view),0);
-         this.pickClip.y = HEAD + PAD;
          this.pickClip.scrollRect = new Rectangle(0,this.pickScroll,LEFT,view);
          this.pickRail.graphics.clear();
          if(this.picksDeep <= view)
@@ -616,6 +642,10 @@ package ui
          face.height = face.textHeight + 6;
       }
 
+      /** Where every row goes is settled before any of them draws. A control places
+       *  what it draws against `tall`, which reflow() has already fixed, so the two are
+       *  separable - and separated they are, because a row that fails to draw then costs
+       *  its own appearance rather than the position of every row after it. */
       private function paintRows() : void
       {
          var option:Option = null;
@@ -631,8 +661,6 @@ package ui
             this.readField.text = this.story;
             this.readField.height = this.readField.textHeight + 8;
             this.readField.textColor = renderer.VALUE;
-            this.clip.x = LEFT + PAD;
-            this.clip.y = HEAD + PAD;
             this.scroll = Config.clamp(this.scroll,0,
                                        Math.max(0,this.readField.height - view),0);
             this.clip.scrollRect = new Rectangle(0,this.scroll,this.inner,view);
@@ -653,13 +681,16 @@ package ui
          {
             option = this.rows[i] as Option;
             option.y = at;
-            option.paint();
             at += option.tall + this.gapAfter(i);
             i++;
          }
+         i = 0;
+         while(i < this.rows.length)
+         {
+            (this.rows[i] as Option).paint();
+            i++;
+         }
          this.scroll = Config.clamp(this.scroll,0,Math.max(0,this.content - view),0);
-         this.clip.x = LEFT + PAD;
-         this.clip.y = HEAD + PAD;
          this.clip.scrollRect = new Rectangle(0,this.scroll,this.inner,view);
          this.paintRail(view);
       }
@@ -835,10 +866,14 @@ package ui
          }
       }
 
+      /** Only the panel's own close says CLOSE. A host that puts the panel away
+       *  itself is going back to its screen, and closing that screen from under it
+       *  would be a dismissal nobody asked for. */
       private function onDismiss(e:MouseEvent) : void
       {
          Option.click();
          this.hide();
+         dispatchEvent(new Event(Event.CLOSE));
       }
    }
 }

@@ -25,6 +25,8 @@ package ui
 
       private var gaps:Array = [];
 
+      private var wide:Number = 0;
+
       public function Run(size:int, most:int, bold:Boolean = false, spacing:Number = 0)
       {
          super();
@@ -65,6 +67,15 @@ package ui
          this.place();
       }
 
+      /** How wide what it currently says came out. A caller that has to fit something
+       *  else beside a reading cannot know its width in advance - the reading is numbers
+       *  the screen was handed - so it is measured here and answered rather than
+       *  reserved for at the worst case it could ever be. */
+      public function get span() : Number
+      {
+         return this.wide;
+      }
+
       /** Laid out so the last piece ends at this sprite's own origin, which is what makes
        *  the caller's job one number: put the run where the row has to end.
        *
@@ -86,6 +97,7 @@ package ui
             }
             i++;
          }
+         this.wide = run;
          at = -run;
          i = 0;
          while(i < this.bits.length)

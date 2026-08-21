@@ -73,6 +73,16 @@ package ui
 
       private static const UNSET:int = -1;
 
+      /** The pitch of a row of quality stars, as a multiple of one star's radius.
+       *
+       *  Two would put them edge to edge, and under two they overlap - which is wanted.
+       *  A row that may not overlap at all has to shrink the star to fit five of them in
+       *  a square, and five tiny stars read worse than five overlapping ones; a star is a
+       *  spiky outline and the points interleave. What was wrong before was not the
+       *  overlap, it was that the pitch was worked out from the square instead of from
+       *  the star, so one star sat alone in the middle and five piled up. */
+      private static const PIP_PITCH:Number = 1.75;
+
       private var rank:int = UNSET;
 
       private var slotId:Object = null;
@@ -421,9 +431,16 @@ package ui
          this.strike.visible = on;
       }
 
+      /** Guarded, because setQuality redraws the row and the property is written on
+       *  every refill - a screen that re-asks the engine on a clock would otherwise
+       *  redraw every star it owns for nothing. setQuality itself stays unconditional:
+       *  it is also how a caller redraws the row at a new size. */
       public function set quality(count:int) : void
       {
-         this.setQuality(count);
+         if(this.pipCount != count)
+         {
+            this.setQuality(count);
+         }
       }
 
       /** Selection nudges the whole square inwards rather than drawing a second state,
@@ -457,11 +474,17 @@ package ui
          this.setQuality(0);
       }
 
-      /** A gem's quality, as that many stars centred along the bottom edge.
+      /** A gem's quality, as that many stars closed up against each other and centred
+       *  along the bottom edge.
        *
        *  Sized to fit rather than fixed. Five stars at a fixed radius are wider than the
        *  square they sit on at any cell size this screen offers, and the row that
-       *  overflows is the five-star one - which is the row a player most wants to see. */
+       *  overflows is the five-star one - which is the row a player most wants to see.
+       *
+       *  Spread edge to edge the gap grew with the square and shrank with the count, so
+       *  one star sat alone in the middle and five piled up on each other. The pitch is
+       *  the star's own size now, and the radius is what falls out of it - one expression
+       *  rather than a spread followed by a correction. */
       public function setQuality(count:int) : void
       {
          var span:Number = this.size - 4;
@@ -475,8 +498,8 @@ package ui
          {
             return;
          }
-         radius = Math.min(this.size * 0.13,span / count * 0.62);
-         step = count > 1 ? (span - radius * 2) / (count - 1) : 0;
+         radius = Math.min(this.size * 0.13,span / (PIP_PITCH * count - (PIP_PITCH - 2)));
+         step = radius * PIP_PITCH;
          left = (this.size - (step * (count - 1) + radius * 2)) / 2 + radius;
          while(i < count)
          {

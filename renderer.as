@@ -165,7 +165,10 @@ package
        *  is opaque by construction, and no drawing call anywhere had to be rewritten
        *  to honour a translucent palette. The primitives mask the byte off before it
        *  reaches the graphics call and fold it into the alpha instead. */
-      private static function solidity(color:uint) : Number
+      /** How opaque a palette colour is. The top byte carries the transparency a player
+       *  set, so anything drawing raw geometry in a palette colour has to apply it the
+       *  way fill() and border() already do - public for those callers. */
+      public static function solidity(color:uint) : Number
       {
          return 1 - (color >>> 24) / 255;
       }
@@ -763,8 +766,12 @@ package
       }
 
       /** One five-pointed pip of a gem's quality, outlined so it reads against the
-       *  item icon behind it. */
-      public static function pip(target:*, x:int = 0, y:int = 0, radius:Number = 0,
+       *  item icon behind it.
+       *
+       *  The centre is a Number and not an int: a row of pips is placed at a fractional
+       *  pitch, and rounding each one to a whole pixel is what made the gaps in a row of
+       *  five come out uneven. */
+      public static function pip(target:*, x:Number = 0, y:Number = 0, radius:Number = 0,
                                  color:uint = 0, alpha:Number = 1) : *
       {
          var start:Number = Math.PI / 4 - Math.PI / 20;

@@ -14,7 +14,13 @@ package
     *
     *  Its value dialect is its own - a flag is 'true' and 'false' where ours is 1 and 0 -
     *  so each option carries how to write it back. A hub that handed a legacy mod our
-    *  literal would silently turn every one of its flags off. */
+    *  literal would silently turn every one of its flags off.
+    *
+    *  What comes back carries every field Hub.ours and Hub.shaped set, down to the ones
+    *  a legacy declaration has nothing to say about. The hub reads a record without
+    *  asking which parser built it, and Iggy throws on a property that is missing rather
+    *  than handing back undefined the way the standalone player does - so a field left
+    *  out here is not an empty value in the panel, it is the panel. */
    public class Legacy
    {
 
@@ -44,7 +50,7 @@ package
          }
          var swf:String = String(root.file);
          var band:String = Hub.stem(swf);
-         return {"swf":swf,"title":String(root.modname),"options":options,
+         return {"swf":swf,"title":String(root.modname),"options":options,"readme":"",
                  "group":band.length == 0 ? "" : band.charAt(0).toUpperCase() + band.substring(1)};
       }
 
@@ -81,7 +87,8 @@ package
          var value:String = spec.value == null ? "" : String(spec.value);
          var option:Object = {"key":key,"label":label,"value":value,"note":
                               spec.description == null ? "" : String(spec.description),
-                              "emit":"","choices":[],"min":0,"max":100,"step":1,"len":0};
+                              "emit":"","choices":[],"min":0,"max":100,"step":1,
+                              "places":0,"zero":"","suffix":"","len":0};
          switch(kind)
          {
             case "checkbox":
