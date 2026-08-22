@@ -54,6 +54,24 @@ package ui
 
       public var image:ObjectPreview;
 
+      /** Where this square's tooltip should open, if the screen holding it has an opinion.
+       *
+       *  The engine grows a tooltip right and down from the point it is handed and only
+       *  turns it round at the edge of the screen - so anchored on the square, it opens
+       *  straight across the rest of the grid. Ours is the only thing that knows where
+       *  the window ends, and Tip.beside is what answers it.
+       *
+       *  **It is SLOT.POINTER_ENTER the item tooltip comes from**, not TOOLTIP.SHOW. The
+       *  engine looks the item up by the id it is handed and draws the card itself;
+       *  TOOLTIP.SHOW is the plain-text one a control asks for by hand, and a square in a
+       *  bag has no text of its own to ask with. Moving only that one moved nothing.
+       *
+       *  A function on the square rather than a window registered on Tip: two of these
+       *  screens can be open at once, and a static would have the second one's window
+       *  answering for the first one's squares. A screen that sets nothing keeps both of
+       *  the points a slot always had. */
+      public var tipAnchor:Function = null;
+
       public var size:int = 0;
 
       /** The element ring the slot was built with, kept apart from `frame` because that
@@ -537,16 +555,20 @@ package ui
             {
                renderer.fill(this.frame,0,0,span,span,uint(edge));
             }
-            renderer.fill(this.frame,2,2,span - 4,span - 4,renderer.RAISED2);
+            /* A hairline, the way every other edge on these screens is. Two pixels of
+               rarity around a forty pixel square is a frame the item is inside; one is a
+               rule the item carries. The second band keeps its pixel of daylight from the
+               first, so a Stellar still reads as two rings and not as one thick one. */
+            renderer.fill(this.frame,1,1,span - 2,span - 2,renderer.RAISED2);
             if(this.rank >= STELLAR)
             {
-               renderer.triband(this.frame,3,3,span - 6,span - 6,0x8913B9,0xB622D9,0x1C97C3);
-               renderer.fill(this.frame,5,5,span - 10,span - 10,renderer.RAISED2);
+               renderer.triband(this.frame,2,2,span - 4,span - 4,0x8913B9,0xB622D9,0x1C97C3);
+               renderer.fill(this.frame,3,3,span - 6,span - 6,renderer.RAISED2);
             }
             else if(this.rank == RADIANT)
             {
-               renderer.fill(this.frame,3,3,span - 6,span - 6,0x95E6CB);
-               renderer.fill(this.frame,5,5,span - 10,span - 10,renderer.RAISED2);
+               renderer.fill(this.frame,2,2,span - 4,span - 4,0x95E6CB);
+               renderer.fill(this.frame,3,3,span - 6,span - 6,renderer.RAISED2);
             }
          }
          // Which of the three states a slot is in cannot be read from any one signal.
@@ -620,12 +642,13 @@ package ui
 
       private function onEnter(e:MouseEvent) : void
       {
-         var corner:Point = localToGlobal(new Point(width,height));
+         var beside:Point = this.tipAnchor != null ? this.tipAnchor(this) as Point : null;
+         var corner:Point = beside != null ? beside : localToGlobal(new Point(width,height));
          var top:Point = null;
          ExternalInterface.call("SLOT.POINTER_ENTER",this.slotId,corner.x,corner.y);
          if(this.tooltipName.length > 0 || this.tooltipDescription.length > 0)
          {
-            top = localToGlobal(new Point(this.width / 2,0));
+            top = beside != null ? beside : localToGlobal(new Point(this.width / 2,0));
             ExternalInterface.call("TOOLTIP.SHOW",top.x,top.y,this.tooltipName,this.tooltipDescription);
          }
       }
