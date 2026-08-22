@@ -27,6 +27,12 @@ package
 
       private static const MODEL_SLACK_REL:Number = 0.006;
 
+      /** A stat rolled to its cap prints a value that puts the roll exactly on the
+       *  tolerance, and the two sides of that comparison are reached by different
+       *  arithmetic - so the last bit decides it, and a perfect gem was thrown out
+       *  as impossible. Slack no real roll fits in: the grid is 1/40 wide. */
+      private static const EDGE:Number = 1e-9;
+
       private static const BANDS:Array = [
          [[[14,85,113],[0.2,85,113],[0.02,85,113],[0.5,85,113],[50,85,113],[1,85,113]],
           [[14,113,150],[0.2,113,150],[0.02,113,150],[0.5,113,150],[50,113,150],[1,113,150]]],
@@ -71,6 +77,24 @@ package
       private var rolls:Array = [];
 
       private var fitErr:Number = 0;
+
+      private var prLow:Number = 0;
+
+      private var prSpan:Number = 0;
+
+      private var raise:Number = 0;
+
+      private var base:Number = 0;
+
+      private var slack:Number = 0;
+
+      private var low:Array = [];
+
+      private var wide:Array = [];
+
+      private var giveNum:Array = [];
+
+      private var lead:Array = [];
 
       private var fitRolls:Array = [];
 
@@ -128,6 +152,15 @@ package
          return _quality;
       }
 
+      /** Whether the tooltip this is reading belongs to a gem at all. Level and
+       *  rarity are the two rows only a gem prints, so either one settles it; Power
+       *  Rank does not, because gear prints that too. Everything the reader does
+       *  beyond noticing these waits on it. */
+      public function get isGem() : Boolean
+      {
+         return _level > 0 || _tier >= 0;
+      }
+
       public function get statCount() : int
       {
          return columns.length;
@@ -179,18 +212,23 @@ package
       }
 
       /** The tooltip has no numbers to hand, only its own rows. Level, Power Rank,
-       *  rarity and the game's word for Empowered all arrive as translated text. */
-      public function readRow(line:String) : void
+       *  rarity and the game's word for Empowered all arrive as translated text.
+       *
+       *  Every row of every tooltip in the game comes through here, so the rows that
+       *  say nothing have to leave cheaply. Level, rarity and Power Rank are three
+       *  prefix tests and cost nothing, and all three are read whatever the item is
+       *  - the rows arrive in the engine's order, not ours, and a gem whose rank was
+       *  skipped for arriving early cannot be graded at all. Only the search for the
+       *  Empowered mark waits on the item being a gem, because only that one has to
+       *  walk the line. Answers whether the row was the grade one, which the caller
+       *  would otherwise have to find out by scanning it again. */
+      public function readRow(line:String) : Boolean
       {
          var i:int = 0;
          warmHeads();
-         if(levelHead.length > 0 && line.indexOf(levelHead) == 0)
+         if(starts(line,levelHead))
          {
             _level = firstInt(line.substring(levelHead.length));
-         }
-         if(isGradeRow(line))
-         {
-            rank = firstInt(line.substring(gradeHead.length));
          }
          while(i < tierNames.length)
          {
@@ -200,34 +238,63 @@ package
             }
             i++;
          }
-         if(chargedWord.length > 0 && line.indexOf(chargedWord) != -1)
+         if(isGem && chargedWord.length > 0 && line.indexOf(chargedWord) != -1)
          {
             hint = 1;
          }
+         if(!starts(line,gradeHead))
+         {
+            return false;
+         }
+         rank = firstInt(line.substring(gradeHead.length));
+         return true;
       }
 
-      public function isGradeRow(line:String) : Boolean
+      /** A prefix test, not a search. indexOf walks the whole line before admitting
+       *  the head is not at the front of it, which on a page of lore is the entire
+       *  page; lastIndexOf bounded at zero only ever looks at position zero. */
+      private static function starts(line:String, head:String) : Boolean
       {
-         warmHeads();
-         return gradeHead.length > 0 && line.indexOf(gradeHead) == 0;
+         return head.length > 0 && line.lastIndexOf(head,0) == 0;
       }
 
+      /** The printed value is stripped once and both the number and its decimal
+       *  places read off the one result. Stripping it twice - once for each - was
+       *  eight throwaway arrays and eight throwaway strings per stat. */
       public function take(name:String, value:String) : Boolean
       {
-         var column:int = columnOf(name,value);
-         var n:Number = number(value);
-         if(column < 0 || isNaN(n) || n <= 0 || columns.length >= 3)
+         var column:int = 0;
+         var body:String = null;
+         var n:Number = 0;
+         if(columns.length >= 3)
+         {
+            return false;
+         }
+         column = columnOf(name,value);
+         if(column < 0)
+         {
+            return false;
+         }
+         body = bare(value);
+         n = Number(body);
+         if(isNaN(n) || n <= 0)
          {
             return false;
          }
          columns.push(column);
          printed.push(n);
-         places.push(decimals(value));
+         places.push(decimals(body));
          marks.push(value.indexOf("%") != -1);
          return true;
       }
 
       /** Every legal boost layout, on both sockets, checked against the Power Rank.
+       *  The layouts are counted out directly rather than filtered out of a cube of
+       *  every combination - three quarters of that cube spends more boosts than the
+       *  level has and was only ever built to be thrown away. The nesting runs the
+       *  last stat outermost so the order the layouts arrive in is the order the
+       *  cube gave them, which is what decides a tie between two equal fits.
+       *
        *  A layout whose rolls fall outside their band is impossible; of the rest the
        *  one whose predicted rank lands nearest wins. A full reading beats a short
        *  one on a tie - a wrong "Bad Gem" could make someone scrap a good gem, so
@@ -236,15 +303,17 @@ package
       public function solve() : Boolean
       {
          var socket:int = 0;
-         var code:int = 0;
-         var want:Array = null;
+         var want:Array = [0,0,0];
          var err:Number = 0;
          var bad:Boolean = false;
          var s:int = 0;
          var n:int = columns.length;
          var cap:int = 0;
-         var span:int = 0;
-         var reach:int = 0;
+         var short:int = 0;
+         var top:int = 0;
+         var a:int = 0;
+         var b:int = 0;
+         var c:int = 0;
          var found:Boolean = false;
          var bestErr:Number = 0;
          var bestBad:Boolean = false;
@@ -254,28 +323,41 @@ package
             return false;
          }
          cap = Math.min(3,int(_level / 5));
-         span = cap + 1;
-         reach = span * span * span;
+         short = Math.max(0,n - cap);
+         top = n >= 3 ? cap : 0;
          while(s < 2)
          {
             socket = s == 0 ? hint : 1 - hint;
-            code = 0;
-            while(code < reach)
+            this.prepare(socket);
+            c = 0;
+            while(c <= top)
             {
-               want = [code % span,int(code / span) % span,int(code / (span * span))];
-               if(legal(want,cap,n) && measure(socket,want))
+               b = 0;
+               while(b + c <= cap)
                {
-                  err = fitErr;
-                  bad = total(want) + Math.max(0,n - cap) < 3;
-                  if(!found || (bad ? 1 : 0) < (bestBad ? 1 : 0) || (bad == bestBad && err < bestErr))
+                  a = 0;
+                  while(a + b + c <= cap)
                   {
-                     found = true;
-                     bestErr = err;
-                     bestBad = bad;
-                     keep(socket,want);
+                     want[0] = a;
+                     want[1] = b;
+                     want[2] = c;
+                     if(measure(want))
+                     {
+                        err = fitErr;
+                        bad = a + b + c + short < 3;
+                        if(!found || (bad ? 1 : 0) < (bestBad ? 1 : 0) || (bad == bestBad && err < bestErr))
+                        {
+                           found = true;
+                           bestErr = err;
+                           bestBad = bad;
+                           keep(socket,want);
+                        }
+                     }
+                     a++;
                   }
+                  b++;
                }
-               code++;
+               c++;
             }
             s++;
          }
@@ -294,60 +376,62 @@ package
          return true;
       }
 
-      private function legal(want:Array, cap:int, n:int) : Boolean
-      {
-         var i:int = n;
-         if(total(want) > cap)
-         {
-            return false;
-         }
-         while(i < 3)
-         {
-            if(int(want[i]) != 0)
-            {
-               return false;
-            }
-            i++;
-         }
-         return true;
-      }
-
-      private function measure(socket:int, want:Array) : Boolean
+      /** Everything in a candidate's arithmetic that the candidate itself does not
+       *  change: the tier and socket's own bands, the lift the level has already
+       *  paid, and each printed stat reduced against its band. Forty candidates a
+       *  socket used to dig all of it back out of three levels of nested Array and
+       *  recompute it every time, which is most of what solving a gem cost. It
+       *  depends on the socket and nothing else, so it is worked out once and the
+       *  sweep is left with the boost counts. */
+      private function prepare(socket:int) : void
       {
          var i:int = 0;
          var band:Array = null;
-         var give:Number = 0;
-         var roll:Number = 0;
-         var bound:Number = 0.5 + Math.max(MODEL_SLACK_MIN,MODEL_SLACK_REL * rank);
-         var guess:Number = 0;
          var table:Array = BANDS[_tier][socket] as Array;
          var pr:Array = PR_BANDS[_tier][socket] as Array;
-         var prSpan:Number = Number(pr[1]) - Number(pr[0]);
-         var raise:Number = lift(_level);
-         var containers:int = 0;
-         fitRolls = [];
+         prLow = Number(pr[0]);
+         prSpan = Number(pr[1]) - prLow;
+         raise = lift(_level);
+         base = (socket == 1 ? 100 : 0) + columns.length * raise;
+         slack = 0.5 + Math.max(MODEL_SLACK_MIN,MODEL_SLACK_REL * rank);
+         low.length = 0;
+         wide.length = 0;
+         giveNum.length = 0;
+         lead.length = 0;
          while(i < columns.length)
          {
             band = table[int(columns[i])] as Array;
+            low.push(Number(band[1]));
+            wide.push(Number(band[2]) - Number(band[1]));
+            giveNum.push(step(int(places[i])) / 2 / Number(band[0]));
+            lead.push(Number(printed[i]) / Number(band[0]) - raise);
+            i++;
+         }
+      }
+
+      private function measure(want:Array) : Boolean
+      {
+         var i:int = 0;
+         var give:Number = 0;
+         var roll:Number = 0;
+         var bound:Number = slack;
+         var guess:Number = base;
+         var containers:int = 0;
+         var n:int = columns.length;
+         fitRolls.length = 0;
+         while(i < n)
+         {
             containers = int(want[i]) + 1;
-            give = step(int(places[i])) / 2 / Number(band[0])
-                 / ((Number(band[2]) - Number(band[1])) * containers);
-            roll = ((Number(printed[i]) / Number(band[0]) - raise) / containers - Number(band[1]))
-                 / (Number(band[2]) - Number(band[1]));
-            if(roll < -give || roll > 1 + give)
+            give = Number(giveNum[i]) / (Number(wide[i]) * containers);
+            roll = (Number(lead[i]) / containers - Number(low[i])) / Number(wide[i]);
+            if(roll < -give - EDGE || roll > 1 + give + EDGE)
             {
                return false;
             }
             roll = roll < 0 ? 0 : (roll > 1 ? 1 : roll);
             fitRolls.push(roll);
             bound += prSpan * containers * give;
-            i++;
-         }
-         guess = (socket == 1 ? 100 : 0) + columns.length * raise;
-         i = 0;
-         while(i < columns.length)
-         {
-            guess += (Number(pr[0]) + prSpan * Number(fitRolls[i])) * (int(want[i]) + 1);
+            guess += (prLow + prSpan * roll) * containers;
             i++;
          }
          fitErr = Math.abs(guess - rank);
@@ -501,9 +585,13 @@ package
                       text("$Rarity_Crystal"),text("$Rarity_Mystic")];
       }
 
-      private static function decimals(raw:String) : int
+      private static function bare(raw:String) : String
       {
-         var body:String = raw.split(",").join("").split("%").join("").split("+").join("").split(" ").join("");
+         return raw.split(",").join("").split("%").join("").split("+").join("").split(" ").join("");
+      }
+
+      private static function decimals(body:String) : int
+      {
          var dot:int = body.indexOf(".");
          return dot < 0 ? 0 : body.length - dot - 1;
       }
@@ -630,9 +718,5 @@ package
          return digits.length > 0 ? int(digits) : 0;
       }
 
-      private static function number(raw:String) : Number
-      {
-         return Number(raw.split(",").join("").split("%").join("").split("+").join("").split(" ").join(""));
-      }
    }
 }

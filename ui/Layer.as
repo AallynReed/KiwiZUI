@@ -3,6 +3,7 @@ package ui
    import flash.display.DisplayObject;
    import flash.display.Sprite;
    import flash.events.MouseEvent;
+   import flash.filters.BlurFilter;
    import flash.geom.Point;
 
    /** A dropdown has to draw over everything, and a control sits far too deep in the
@@ -38,6 +39,14 @@ package ui
 
       private static var showing:Sprite;
 
+      /** What to soften while a popup is up.
+       *
+       *  **It cannot be the screen.** In game a screen is the root, and the popup is a
+       *  child of the root, so anything set on the screen reaches the popup as well. A
+       *  caller that wants this puts its own content in a container and names that; one
+       *  that does not is untouched, so no screen gains a blur by surprise. */
+      public static var behind:DisplayObject;
+
       public function Layer()
       {
          super();
@@ -70,6 +79,7 @@ package ui
          sheet.graphics.clear();
          renderer.fill(sheet,-REACH,-REACH,REACH * 2,REACH * 2,renderer.BLACK,0);
          top.addChild(sheet);
+         soften(true);
 
          var at:Point = top.globalToLocal(anchor.localToGlobal(new Point(x,y)));
          popup.x = at.x;
@@ -96,8 +106,32 @@ package ui
          popup.y = Config.clamp(popup.y,0,Math.max(0,frameH - popup.height),popup.y);
       }
 
+      /** Blurred and dimmed, so the popup is the only thing in focus and the screen
+       *  behind it is plainly not what is being read.
+       *
+       *  The blur is tried and the dim is not: filters are one more thing Iggy is being
+       *  asked for, and a rejected one takes down whatever called it. Losing the blur
+       *  leaves a popup over a dimmed screen, which is the same idea more cheaply; losing
+       *  the screen does not. */
+      private static function soften(on:Boolean) : void
+      {
+         if(behind == null)
+         {
+            return;
+         }
+         try
+         {
+            behind.filters = on ? [new BlurFilter(6,6,2)] : [];
+         }
+         catch(e:Error)
+         {
+         }
+         behind.alpha = on ? 0.55 : 1;
+      }
+
       public static function hide() : void
       {
+         soften(false);
          if(showing != null && showing.parent != null)
          {
             showing.parent.removeChild(showing);

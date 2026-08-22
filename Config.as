@@ -22,8 +22,6 @@ package
    public class Config
    {
 
-      public static const SENTINEL:String = "seeded";
-
       /** How long past the first key that arrives before seeding, and how long from
        *  arming before giving up on one arriving at all. */
       private static const SETTLE:int = 600;
@@ -155,16 +153,20 @@ package
       }
 
       /** Writes only what never came back. defaultFor(key) returns the literal to
-       *  write, so each caller keeps its own typed key table. */
+       *  write, so each caller keeps its own typed key table.
+       *
+       *  **There is no sentinel.** This used to write a `seeded` key and there was never
+       *  anything that read it: seeding is per key, so the file itself says what is
+       *  missing and a mark saying "this file has been seeded" answers a question nobody
+       *  asks. All it did was put a line in every player's config that they could edit
+       *  and watch do nothing, and spend a write saying so. Gating on one is the older
+       *  mistake it is a leftover of - with it, every option added after a player's first
+       *  run never reaches them. */
       public function seedMissing(keys:Array, defaultFor:Function) : int
       {
          var key:String = null;
          var written:int = 0;
          var i:int = 0;
-         if(!this.saw(SENTINEL))
-         {
-            this.save(SENTINEL,"1");
-         }
          while(i < keys.length)
          {
             key = String(keys[i]);

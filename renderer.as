@@ -2,6 +2,7 @@ package
 {
    import flash.display.Bitmap;
    import ui.Icon;
+   import flash.events.MouseEvent;
    import flash.display.GradientType;
    import flash.filters.ColorMatrixFilter;
    import flash.filters.DropShadowFilter;
@@ -16,6 +17,22 @@ package
     *  point without asking what was drawn before. */
    public class renderer
    {
+
+      /** How far one notch of the wheel moves a view, added to whatever the caller
+       *  measures its scroll in.
+       *
+       *  **Iggy's `delta` is not the three lines Flash documents, and its size is not a
+       *  count of anything.** Multiplying by it moved every list here a screenful or more
+       *  at a time. Trove's own `ScrollableView` divides it by its own magnitude and
+       *  keeps only the sign, which is the whole of what the number is good for - so the
+       *  distance is one we choose and the wheel says nothing but which way.
+       *
+       *  The default is a notch as the desktop has always meant it, three lines of text.
+       *  A view whose rows are its unit passes its own row height instead. */
+      public static function wheel(e:MouseEvent, by:Number = 48) : Number
+      {
+         return e.delta > 0 ? -by : by;
+      }
 
       /** The greys carry the default translucency in their top byte rather than a
        *  separate opacity setting multiplied over every draw. A fixed multiplier meant
@@ -87,6 +104,8 @@ package
       private static const GUTTER:int = 2;
 
       private static const LINES:Object = {};
+
+      private static const ASCENTS:Object = {};
 
       private static const LIFT:Number = 0.1;
 
@@ -367,26 +386,70 @@ package
        *  and the descent to whole pixels, so 12pt and 13pt come out the same height -
        *  and a field with nothing in it reports no height at all, which is the state
        *  every control paints in before it has anything to say. */
-      private static function lineOf(size:Number) : Number
+      /** Bold is part of the measurement, not a detail of it. Trove ships Open Sans as
+       *  five separate faces and the semibold is not the regular at another weight - it
+       *  has its own ascent - so a bold title measured against the regular sits a pixel
+       *  off the plain text beside it, which is exactly how far off it was. */
+      private static function lineOf(size:Number, bold:Boolean = false) : Number
       {
-         var key:String = String(size);
+         var key:String = String(size) + (bold ? "b" : "");
          var probe:TextField = null;
          if(LINES[key] == null)
          {
             probe = new TextField();
-            probe.defaultTextFormat = new TextFormat("Open Sans",size);
+            probe.defaultTextFormat = new TextFormat("Open Sans",size,0,bold);
             probe.text = "Hg";
             LINES[key] = probe.textHeight + GUTTER * 2;
          }
          return Number(LINES[key]);
       }
 
+      /** How far under a field's own top edge the first line of text sits on.
+       *
+       *  This is the number that makes two fields at two sizes line up. A field is a
+       *  gutter plus the ascent of whatever is written in it, and the ascent grows with
+       *  the point size - so two boxes centred as boxes put their words on two different
+       *  lines, and a fifteen point title beside a twelve point count reads as one of
+       *  them having slipped. */
+      private static function ascentOf(size:Number, bold:Boolean = false) : Number
+      {
+         var key:String = String(size) + (bold ? "b" : "");
+         var probe:TextField = null;
+         if(ASCENTS[key] == null)
+         {
+            probe = new TextField();
+            probe.defaultTextFormat = new TextFormat("Open Sans",size,0,bold);
+            probe.text = "Hg";
+            ASCENTS[key] = probe.getLineMetrics(0).ascent + GUTTER;
+         }
+         return Number(ASCENTS[key]);
+      }
+
+      /** Puts a field so its text sits on a given line, whatever size that text is.
+       *
+       *  **This is what "aligned" means for text**, and it is the only thing that makes
+       *  two sizes agree. Anything placing two fields that should read as one row asks
+       *  baselineIn() for the line once and puts both of them on it. */
+      public static function baseline(field:TextField, y:Number) : void
+      {
+         var fmt:TextFormat = field.defaultTextFormat;
+         field.y = y - ascentOf(Number(fmt.size),fmt.bold == true);
+      }
+
+      /** The line text that size wants in a box that tall - the same answer centre()
+       *  arrives at, handed out so a row of different sizes can share one. */
+      public static function baselineIn(size:Number, top:Number, h:Number,
+                                        bold:Boolean = false) : Number
+      {
+         return top + (h - lineOf(size,bold)) / 2 + ascentOf(size,bold);
+      }
+
       /** How tall a box has to be for that many lines at that size, gutters included.
        *  A pinned field keeps whatever height it was made with, so a wrapping one has to
        *  be given the room its lines need or it shows the first of them and stops. */
-      public static function deep(size:Number, lines:int = 1) : int
+      public static function deep(size:Number, lines:int = 1, bold:Boolean = false) : int
       {
-         return int(lineOf(size) * lines + GUTTER * 2);
+         return int(lineOf(size,bold) * lines + GUTTER * 2);
       }
 
       /** Puts text in the middle of a box. The field's own height is the wrong thing
@@ -401,8 +464,20 @@ package
        *  sits and a box cannot drift away from the words in it. */
       public static function centre(field:TextField, top:Number, h:Number) : void
       {
-         var line:Number = lineOf(Number(field.defaultTextFormat.size));
-         field.y = top + (h - Math.max(line,field.textHeight + GUTTER * 2)) / 2;
+         var fmt:TextFormat = field.defaultTextFormat;
+         var size:Number = Number(fmt.size);
+         var bold:Boolean = fmt.bold == true;
+         var line:Number = lineOf(size,bold);
+         var deep:Number = field.textHeight + GUTTER * 2;
+         /* One line goes on the line, so a caption and a readout beside it agree without
+            either of them being nudged by hand. More than one is centred as a block -
+            there is no single baseline to put a paragraph on. */
+         if(deep <= line)
+         {
+            baseline(field,baselineIn(size,top,h,bold));
+            return;
+         }
+         field.y = top + (h - deep) / 2;
       }
 
       /** The same rule across a box. A field draws its text a gutter in from its own

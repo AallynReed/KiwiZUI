@@ -168,8 +168,11 @@ package ui
          addChild(this.image);
          /* The stack count is sized off the square rather than fixed, because the square
             is not: an inventory lets the player choose it, and fifteen point on a forty
-            pixel cell overhangs into the one beside it. */
-         this.tally = renderer.label(0,size - 16,size >= 56 ? 15 : (size >= 40 ? 12 : 10),
+            pixel cell overhangs into the one beside it.
+            Where it sits is settled in retally(), off the height of the line it ends up
+            with - `size - 16` was a constant guess at that and hung the number off the
+            bottom of a big square. */
+         this.tally = renderer.label(0,0,size >= 56 ? 15 : (size >= 40 ? 12 : 10),
                                      TextFieldAutoSize.RIGHT," ",size,30,false,true);
          this.tally.filters = [renderer.SHADOW,renderer.SHADOW2];
          addChild(this.tally);
@@ -406,9 +409,16 @@ package ui
          }
       }
 
+      /** The gap between the number and the bottom edge of the square. */
+      private static const TALLY_PAD:int = 2;
+
       private function retally() : void
       {
          this.tally.text = this.held <= 1 ? " " : (this.withX ? "x" : "") + String(this.held);
+         /* Against the line the field actually ended up with, not against its point size:
+            a field is two pixels of gutter taller than its text, and a guessed offset is
+            a number that sits right at one square size and hangs off the next. */
+         this.tally.y = this.size - this.tally.textHeight - TALLY_PAD;
       }
 
       public function get showQuantity() : Boolean

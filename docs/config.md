@@ -156,5 +156,8 @@ there; anyone else copies it across by hand. Nothing in the mod does this for th
 
 It is still worth packing, because it is the only copy a player can get hold of at all.
 
-**Do not put a `seeded` sentinel in the shipped file.** With it, the mod skips seeding, so
-any option added in a later version never reaches that user.
+**Do not put a `seeded` sentinel in the shipped file** — or anywhere else. `Config` used
+to write one and nothing ever read it: seeding is per key, so the file itself says what is
+missing. All a sentinel does is spend a write and leave a line in every player's config
+that they can edit and watch do nothing. Gate seeding on one and it is worse than useless,
+because every option added after a player's first run then never reaches them.

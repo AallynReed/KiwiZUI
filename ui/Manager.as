@@ -188,7 +188,13 @@ package ui
        *
        *  A screen that declares twice replaces its earlier statement rather than
        *  appearing twice - the key it arrived under is that screen, so that is what
-       *  identifies it. */
+       *  identifies it.
+       *
+       *  A statement that says what the one before it said is taken and dropped. A mod
+       *  restates itself whenever it is running while its settings are being changed
+       *  from here, and rebuilding the whole panel to redraw the value the player has
+       *  just set is work for nothing - with the controls thrown away and made again
+       *  under the pointer that set them. */
       public function offer(name:String, value:String) : Boolean
       {
          var at:int = 0;
@@ -200,6 +206,7 @@ package ui
             return false;
          }
          record.id = name;
+         record.raw = value;
          title = String(record.title);
          if(this.mods[title] == null)
          {
@@ -216,6 +223,10 @@ package ui
          }
          else
          {
+            if(String((parts[at] as Object).raw) == value)
+            {
+               return true;
+            }
             parts[at] = record;
          }
          if(this.shown)
@@ -748,7 +759,7 @@ package ui
          if(this.panel.mouseX < LEFT)
          {
             was = this.pickScroll;
-            this.pickScroll = Config.clamp(this.pickScroll - e.delta * 6,0,
+            this.pickScroll = Config.clamp(this.pickScroll + renderer.wheel(e),0,
                                            Math.max(0,this.picksDeep - this.view),0);
             if(this.pickScroll != was)
             {
@@ -757,7 +768,7 @@ package ui
             return;
          }
          was = this.scroll;
-         this.scroll = Config.clamp(this.scroll - e.delta * 6,0,
+         this.scroll = Config.clamp(this.scroll + renderer.wheel(e),0,
                                     Math.max(0,this.content - this.view),0);
          if(this.scroll != was)
          {

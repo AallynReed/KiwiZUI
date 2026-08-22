@@ -27,7 +27,11 @@ package
     *  Publishing waits a beat for the same reason seeding does: ExternalInterface.call
     *  goes nowhere until Iggy has wired the bridge, silently, and a declaration made
     *  from a constructor is simply lost. Paced on ENTER_FRAME rather than a Timer,
-    *  because callbacks can arrive before the first frame tick. */
+    *  because callbacks can arrive before the first frame tick.
+    *
+    *  It waits again afterwards. A setting the player changes is one write; recording
+    *  it here is a second, and Trove rewrites the whole file for either - so the record
+    *  trails the changing rather than following each step of it. */
    public class Hub
    {
 
@@ -59,6 +63,15 @@ package
 
       private static const SETTLE:int = 2000;
 
+      /** How long the record waits after the last change before it is written.
+       *
+       *  Trove rewrites the whole .cfg for one key, and the hub's file is every mod's
+       *  declarations - so the write that records a change costs more than the write
+       *  that makes it, and doing both on the click is what makes a setting take the
+       *  game away for a moment. One is all the player asked for; the record follows
+       *  once the changing has stopped. */
+      private static const QUIET:int = 1500;
+
       private var section:String;
 
       private var title:String;
@@ -77,10 +90,13 @@ package
 
       private var last:String;
 
-      /** Until the first declaration has gone out, publish() does nothing. Config
-       *  arrives one key at a time and a screen that republished on each of them would
-       *  spend the whole of its load writing - the same spam that kills a screen when
-       *  it is aimed at its own section, aimed at someone else's. */
+      /** A change is waiting to be recorded. */
+      private var dirty:Boolean = false;
+
+      /** Until the first declaration has gone out, nothing is written. Config arrives
+       *  one key at a time and a screen that republished on each of them would spend
+       *  the whole of its load writing - the same spam that kills a screen when it is
+       *  aimed at its own section, aimed at someone else's. */
       private var armed:Boolean = false;
 
       /** group names the screen these settings belong to. A mod with more than one
@@ -167,24 +183,50 @@ package
          this.screen.addEventListener(Event.ENTER_FRAME,this.onFrame);
       }
 
+      /** The beat stays on the screen rather than coming off at the first write: it is
+       *  what carries a change to the file once the player has stopped making them. */
       private function onFrame(e:Event) : void
       {
          if(getTimer() < this.due)
          {
             return;
          }
-         this.screen.removeEventListener(Event.ENTER_FRAME,this.onFrame);
-         this.armed = true;
-         this.publish();
+         if(!this.armed)
+         {
+            this.armed = true;
+            this.dirty = true;
+         }
+         if(this.dirty)
+         {
+            this.dirty = false;
+            this.record();
+         }
       }
 
-      /** Called again whenever a setting changes, so the hub shows what the screen is
-       *  actually running with. Silent when nothing moved: a republish that says what
-       *  the last one said is a config write for no news. */
+      /** Called whenever a setting changes, so the hub shows what the screen is
+       *  actually running with. It marks rather than writes, and the beat writes QUIET
+       *  after the last change - so a click is one config write, the setting itself,
+       *  and a run of them is still one record at the end of it.
+       *
+       *  The wait is only ever pushed back once the first declaration has gone out.
+       *  Config arrives one key at a time and each arrival publishes, so before that
+       *  it would walk the arming beat forward key by key and declare early - into a
+       *  bridge Iggy has not wired yet, where the call goes nowhere. */
       public function publish() : void
       {
+         this.dirty = true;
+         if(this.armed)
+         {
+            this.due = getTimer() + QUIET;
+         }
+      }
+
+      /** Silent when nothing moved: a record that says what the last one said is a
+       *  config write for no news. */
+      private function record() : void
+      {
          var line:String = this.declaration();
-         if(!IggyFunctions.inIggy || !this.armed || line == this.last)
+         if(!IggyFunctions.inIggy || line == this.last)
          {
             return;
          }

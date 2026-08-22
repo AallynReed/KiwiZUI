@@ -297,7 +297,7 @@ package ui
       private function onWheel(e:MouseEvent) : void
       {
          var was:Number = this.scroll;
-         this.scroll = Config.clamp(this.scroll - e.delta * 6,0,this.content - this.view,0);
+         this.scroll = Config.clamp(this.scroll + renderer.wheel(e),0,this.content - this.view,0);
          if(this.scroll != was)
          {
             this.paint();

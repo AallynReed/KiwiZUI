@@ -46,6 +46,12 @@ your config file. `watch()` arms it and republishes whenever a value changes.
 Publishing waits a beat, on `ENTER_FRAME`: `ExternalInterface.call` goes nowhere until
 Iggy has wired the bridge, silently, so a declaration made from a constructor is lost.
 
+It waits again after that. `publish()` marks the declaration rather than writing it,
+and the beat writes 1.5s after the last change - so changing a setting is one config
+write, the setting itself, and a run of changes is one record at the end of it. Trove
+rewrites the whole `.cfg` for a single key and the hub's file holds every mod's
+declaration, so the record costs more than the setting does.
+
 ## Declaring, without the library
 
 One write, under a key prefixed `zm_`, with the whole declaration as the value:

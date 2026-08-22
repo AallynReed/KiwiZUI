@@ -277,7 +277,8 @@ package ui
       private function onWheel(e:MouseEvent) : void
       {
          var was:int = this.first;
-         this.first = Config.clamp(this.first - e.delta,0,this.values.length - this.page,this.first);
+         this.first = Config.clamp(this.first + renderer.wheel(e,3),0,
+                                   this.values.length - this.page,this.first);
          if(this.first != was)
          {
             this.onTrack(e);
