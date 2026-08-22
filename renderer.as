@@ -460,6 +460,38 @@ package
          }
       }
 
+      /** The same cut made against a wrapping field's line count rather than one line's
+       *  width. A name too long for the lines it has is shortened until it fits them,
+       *  which is what keeps a row the height it was measured at. */
+      public static function elideLines(field:TextField, lines:int) : void
+      {
+         var body:String = field.text;
+         while(body.length > 1 && field.numLines > lines)
+         {
+            body = body.substr(0,body.length - 1);
+            field.text = body + "…";
+         }
+      }
+
+      /** Puts a field at a different size, keeping everything else about its format.
+       *  A field is built once and lives as long as the control it is in, so a text
+       *  size the player can change has to reach the fields that are already there.
+       *  The getter hands back a copy, so the shared format is not touched. */
+      public static function resize(field:TextField, size:int) : void
+      {
+         var fmt:TextFormat = field.defaultTextFormat;
+         if(int(fmt.size) == size)
+         {
+            return;
+         }
+         fmt.size = size;
+         field.defaultTextFormat = fmt;
+         if(field.length > 0)
+         {
+            field.setTextFormat(fmt);
+         }
+      }
+
       /** Three bars: the settings glyph on every screen that has one. Drawn from a
        *  corner rather than a centre because it goes into a button's face at a fixed
        *  inset. */
@@ -795,9 +827,11 @@ package
          return target;
       }
 
-      public static function group(value:int) : String
+      /** Number rather than int: a leaderboard score past 2^31 wraps negative under an
+       *  int cast, so the whole part is taken with Math instead. */
+      public static function group(value:Number) : String
       {
-         return commas(String(value));
+         return commas(String(value < 0 ? Math.ceil(value) : Math.floor(value)));
       }
 
       /** Same grouping, on a string that may carry a decimal tail or a percent sign. */

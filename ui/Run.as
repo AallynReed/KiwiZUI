@@ -43,6 +43,22 @@ package ui
          mouseChildren = false;
       }
 
+      /** Puts the whole row at a different size. A run is built once and lives as long
+       *  as the control it is in, so a text size the player can change has to reach the
+       *  fields that are already there. The next say() lays them out again. */
+      public function resize(size:int) : void
+      {
+         var field:TextField = null;
+         var i:int = 0;
+         while(i < this.bits.length)
+         {
+            field = this.bits[i] as TextField;
+            renderer.resize(field,size);
+            field.height = size * 2;
+            i++;
+         }
+      }
+
       /** What the row says, as `{text, lit, gap}` in reading order. `gap` is the room the
        *  piece keeps in front of itself, which is a property of what it says rather than
        *  of where it lands. Pieces past what this run was built to hold are dropped. */
