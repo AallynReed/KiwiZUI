@@ -64,45 +64,33 @@ no listener and no event delivery, and its worst case is a highlight that does n
 
 ---
 
-## A control loses its next press after the list is rebuilt
+## A control does nothing until it is pressed twice
 
-**Symptom.** A button or a checkbox on a list row does nothing the first time it is
-pressed. Press it again and it works. Reopen the window and the first press is dead
-again, on every row. Reads exactly like a hit test that is off by a few pixels, and no
-amount of fixing the geometry changes it.
+**Symptom.** A checkbox takes two presses to do anything. The first moves the box and the
+game does not react; the second works. The box reads inverted from then on.
 
-**Cause.** Iggy has to find a display object again after it is added to the display list,
-and until it has, it will not aim the pointer at it. A layout pass that empties its
-container and re-adds every row therefore costs every control on screen its next press.
-Where the list rebuilds in response to engine updates, that is most presses.
+**Cause.** The control is sending the engine the state it was in *before* the press. The
+engine acts on a setting only when the value differs from the one it holds, so that press
+is silently a no-op, and the box is left holding the opposite of what the game does.
 
-**Fix.** Move rows, do not re-add them. Remove only what has left the list, add only what
-is new, and set `x`/`y` on the rest. Depth usually does not need restoring - list rows do
-not overlap, so nothing reads it.
+Trove's `OnHideCategory` is the case that cost five builds: its second argument is the
+always-show state, not the hide flag its name promises. Vanilla passes `!showBtn.checked`
+and looks like it is passing a hide flag - but the header registers its own click handler
+before the `Checkbox` registers the one that toggles it, so `checked` is still the old
+state and `!checked` is the new one. Flip your own state first and pass it as it stands.
 
-**It is not the click, and it is not the hit test.** Both were tried first here. Moving
-the handler to `MOUSE_DOWN` does nothing, because no event is dispatched at all; and the
-coordinates were right the whole time. Check whether the container is being emptied before
-looking anywhere else.
+**It looks exactly like a hit test.** Four fixes went into the input path first - the click
+region, `MOUSE_DOWN` over `CLICK`, the list re-adding its rows, the inbound flag's polarity
+- and none of them was the fault. Nothing about the symptom points at a value.
 
----
+**Fix.** Probe rather than reason. `UIComponent.OnSaveConfig` is a channel out of the SWF
+that survives anything, and a handler writing one bounded line per press - where the
+pointer was, which branch ran, the state before, the value sent, whether the call threw -
+settles it in one restart.
 
-## A control on a list takes two presses
-
-**Symptom.** A button or a checkbox on a list row does nothing on the first press and
-works on the second. Reads exactly like a hit test that is off by a few pixels, and every
-attempt to fix the geometry changes nothing.
-
-**Cause.** `CLICK` is a matched `MOUSE_DOWN` and `MOUSE_UP` on the one control. A list
-that re-places its rows in response to engine updates moves the row out from under the
-pointer between the two, and no click is ever made. The Activity Tracker rebuilds a frame
-after any update and its activities carry clocks, so updates never stop arriving.
-
-**Fix.** Act on `MOUSE_DOWN`. It is delivered on its own and cannot be dropped by a
-re-layout, and a control that responds on the press feels immediate rather than late.
-
-Rows that never move may stay on `CLICK`. Anything on a list that re-places itself may
-not.
+**Record the state before the press, not just after, and check the control was right to
+begin with.** Without that, "the box was wrong" and "the value sent was wrong" fit the same
+trace, and picking between them is a coin toss that costs a build.
 
 ---
 
