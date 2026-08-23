@@ -4,6 +4,7 @@ package
    import ui.Icon;
    import flash.events.MouseEvent;
    import flash.display.GradientType;
+   import flash.filters.BitmapFilterQuality;
    import flash.filters.ColorMatrixFilter;
    import flash.filters.DropShadowFilter;
    import flash.geom.Matrix;
@@ -11,6 +12,7 @@ package
    import flash.text.TextFieldAutoSize;
    import flash.text.TextFormat;
    import flash.text.TextFormatAlign;
+   import flash.text.TextLineMetrics;
 
    /** Every colour the screens draw with, and the primitives they draw. Nothing here
     *  keeps state beyond the palette, so a screen can repaint from scratch at any
@@ -95,6 +97,16 @@ package
       public static const SHADOW:DropShadowFilter = new DropShadowFilter(0,45,0,0,0,0,0,1);
 
       public static const SHADOW2:DropShadowFilter = new DropShadowFilter(0,210,0,0,0,0,0,1);
+
+      /** A hard copy of the glyph one pixel under it rather than a haze around it: at
+       *  the sizes these screens draw at a blur thickens the text and reads as being
+       *  slightly out of focus. For a number that has to be read off whatever it is
+       *  drawn over - a stack count on an item icon - and never over a panel.
+       *
+       *  It goes on a field and never on a container. One on a sprite is a different
+       *  call and it has taken a screen down with nothing in any log. */
+      public static const SHADE:DropShadowFilter = new DropShadowFilter(1,90,0,0.6,0,0,1,
+                                                                        BitmapFilterQuality.LOW);
 
       public static const GHOST:ColorMatrixFilter = new ColorMatrixFilter([0.4,0.4,0.4,0,0,0.4,0.4,0.4,0,0,0.4,0.4,0.4,0,0,0,0,0,1,0]);
 
@@ -390,16 +402,25 @@ package
        *  five separate faces and the semibold is not the regular at another weight - it
        *  has its own ascent - so a bold title measured against the regular sits a pixel
        *  off the plain text beside it, which is exactly how far off it was. */
+      /** The line is the ascent and the descent and nothing else. textHeight is the same
+       *  number in Flash at every size we draw at, and is not in a host that folds the
+       *  font's line gap into it - which makes the box taller than the text in it and
+       *  centres every caption above the control drawn around it. Measured metrics of
+       *  zero are that host having no answer at all, so textHeight stands in. */
       private static function lineOf(size:Number, bold:Boolean = false) : Number
       {
          var key:String = String(size) + (bold ? "b" : "");
          var probe:TextField = null;
+         var m:TextLineMetrics = null;
+         var tall:Number = 0;
          if(LINES[key] == null)
          {
             probe = new TextField();
             probe.defaultTextFormat = new TextFormat("Open Sans",size,0,bold);
             probe.text = "Hg";
-            LINES[key] = probe.textHeight + GUTTER * 2;
+            m = probe.getLineMetrics(0);
+            tall = m.ascent + m.descent;
+            LINES[key] = (tall > 0 ? tall : probe.textHeight) + GUTTER * 2;
          }
          return Number(LINES[key]);
       }
@@ -487,6 +508,19 @@ package
       public static function across(field:TextField, left:Number, w:Number) : void
       {
          field.x = left + (w - (field.textWidth + GUTTER * 2)) / 2;
+      }
+
+      /** Sizes a field to what is written in it and puts that text's left edge at x.
+       *
+       *  A field left wider than its word is not merely untidy: a sprite's clicks are
+       *  its children's as well as its own, and a child field reaching past the box
+       *  drawn around it takes the clicks out there too. That is a control whose hitbox
+       *  does not sit where the control does, which no amount of moving the box fixes. */
+      public static function hug(field:TextField, x:Number) : void
+      {
+         field.width = field.textWidth + GUTTER * 2;
+         field.height = field.textHeight + GUTTER * 2;
+         field.x = x - GUTTER;
       }
 
       /** Makes a line fit the width it has by getting smaller, and answers the size it

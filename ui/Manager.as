@@ -75,6 +75,8 @@ package ui
 
       private var panel:Sprite = new Sprite();
 
+      private var panelBox:Shape = new Shape();
+
       private var picks:Sprite = new Sprite();
 
       private var pickClip:Sprite = new Sprite();
@@ -124,6 +126,7 @@ package ui
          this.span = span;
          this.high = high;
          addChild(this.panel);
+         this.panel.addChild(this.panelBox);
          this.titleField = renderer.label(PAD,0,14,TextFieldAutoSize.LEFT,"MOD SETTINGS",
                                           240,24,false,true);
          this.panel.addChild(this.titleField);
@@ -520,14 +523,21 @@ package ui
          return total;
       }
 
+      /** The panel draws into a child Shape rather than into its own graphics. Iggy
+       *  measures a sprite by its children and ignores what it drew itself, so a panel
+       *  that painted its own background was only as wide as the controls on it - the
+       *  wheel reached it over a row and went to the *game* over every gap, zooming the
+       *  camera while this was the only thing on screen. The Shape gives the panel a
+       *  size to be aimed at; the drawing is unchanged, since a first child paints where
+       *  the sprite's own graphics did. */
       public function paint() : void
       {
-         this.panel.graphics.clear();
-         renderer.fill(this.panel,0,0,this.span,this.high,renderer.PANEL,1);
-         renderer.fill(this.panel,0,0,this.span,HEAD,renderer.HEADER,1);
-         renderer.fill(this.panel,0,HEAD,this.span,1,renderer.CYAN,0.85);
-         renderer.fill(this.panel,LEFT,HEAD + 1,1,this.high - HEAD - 1,renderer.BORDER,1);
-         renderer.border(this.panel,0,0,this.span,this.high,renderer.ROW);
+         this.panelBox.graphics.clear();
+         renderer.fill(this.panelBox,0,0,this.span,this.high,renderer.PANEL,1);
+         renderer.fill(this.panelBox,0,0,this.span,HEAD,renderer.HEADER,1);
+         renderer.fill(this.panelBox,0,HEAD,this.span,1,renderer.CYAN,0.85);
+         renderer.fill(this.panelBox,LEFT,HEAD + 1,1,this.high - HEAD - 1,renderer.BORDER,1);
+         renderer.border(this.panelBox,0,0,this.span,this.high,renderer.ROW);
 
          this.titleField.textColor = renderer.VALUE;
          renderer.centre(this.titleField,0,HEAD);

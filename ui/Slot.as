@@ -91,6 +91,9 @@ package ui
 
       private static const UNSET:int = -1;
 
+      /** How far a pressed square shrinks. */
+      private static const PRESS:Number = 0.85;
+
       /** The pitch of a row of quality stars, as a multiple of one star's radius.
        *
        *  Two would put them edge to edge, and under two they overlap - which is wanted.
@@ -117,6 +120,9 @@ package ui
 
       public var tooltipDescription:String = "";
 
+      /** Whether the square lights under the pointer. The stock slot walks its frame to
+       *  a highlight state on roll over and back on roll out, and only when nothing is
+       *  worn in it - a gear square that is filled says so already. */
       public var hasRollOver:Boolean = false;
 
       public var useLargeBitmaps:Boolean = false;
@@ -139,6 +145,34 @@ package ui
 
       private var pipCount:int = 0;
 
+      private var mark:uint = 0;
+
+      private var lit:Boolean = false;
+
+      private var fresh:Boolean = false;
+
+      /** Everything drawn lives in here and never in the slot itself.
+       *
+       *  A press shrinks the square, and a shrink has to be offset by half of what it
+       *  took away or it collapses towards the top left corner. Done on the slot, that
+       *  offset is written into the same x and y the grid lays the slot out with - so
+       *  any reflow between the press and the release wipes it, the square scales about
+       *  its corner, and the release then takes the offset off a position that never had
+       *  it and leaves the whole cell adrift.
+       *
+       *  Scaling a child instead keeps the press out of the layout entirely. It is deaf
+       *  to the mouse so the slot stays the target of everything, which is what the drag
+       *  watcher listens on. */
+      private var body:Sprite = new Sprite();
+
+      /** How much of the highlight colour a marked square carries. Behind the icon
+       *  rather than around it: the frame is already the rarity's and a second ring
+       *  beside it reads as a thicker frame rather than as a different thing. */
+      private static const MARK_WASH:Number = 0.3;
+
+      /** The radius of the dot a square carries while what is in it is new. */
+      private static const MARK_DOT:Number = 3;
+
       /** STYLEABLE and ALWAYS_FILLED read the slot id as a gear position, which is what
        *  it is on the character sheet and is not what it is anywhere else. A screen whose
        *  ids are inventory indexes says so here, or its first four squares come out as a
@@ -150,11 +184,14 @@ package ui
          super();
          this.size = size;
          this.positional = positional;
-         addChild(this.edging);
+         this.body.mouseEnabled = false;
+         this.body.mouseChildren = false;
+         addChild(this.body);
+         this.body.addChild(this.edging);
          renderer.framed(this.edging,0,0,size,size,renderer.RAISED2,
                          edge != -1 ? uint(edge) : renderer.PANEL);
-         addChild(this.frame);
-         addChild(this.strike);
+         this.body.addChild(this.frame);
+         this.body.addChild(this.strike);
          renderer.fill(this.strike,-1.5,-(size >> 1) + 2,3,size - 4,renderer.RED,0.8);
          this.strike.rotation = 35;
          this.strike.x = size >> 1;
@@ -165,18 +202,18 @@ package ui
          this.image.y = 4;
          this.image.mouseEnabled = false;
          this.image.loadedCallback = this.onPreviewLoaded;
-         addChild(this.image);
+         this.body.addChild(this.image);
          /* The stack count is sized off the square rather than fixed, because the square
             is not: an inventory lets the player choose it, and fifteen point on a forty
             pixel cell overhangs into the one beside it.
-            Where it sits is settled in retally(), off the height of the line it ends up
-            with - `size - 16` was a constant guess at that and hung the number off the
-            bottom of a big square. */
-         this.tally = renderer.label(0,0,size >= 56 ? 15 : (size >= 40 ? 12 : 10),
+            Along the top edge, which is the part of an icon that is most often empty -
+            against the bottom it sat over the heaviest part of the art and shared the
+            edge with the quality stars, and a small square left it unreadable. */
+         this.tally = renderer.label(0,TALLY_PAD,size >= 56 ? 15 : (size >= 40 ? 12 : 10),
                                      TextFieldAutoSize.RIGHT," ",size,30,false,true);
-         this.tally.filters = [renderer.SHADOW,renderer.SHADOW2];
-         addChild(this.tally);
-         addChild(this.pips);
+         this.tally.filters = [renderer.SHADE];
+         this.body.addChild(this.tally);
+         this.body.addChild(this.pips);
          addEventListener(MouseEvent.MOUSE_DOWN,this.onPress);
          addEventListener(MouseEvent.CLICK,this.onClick);
          addEventListener(MouseEvent.MOUSE_OVER,this.onEnter);
@@ -220,6 +257,12 @@ package ui
          this.canDrag = on;
       }
 
+      /** Carried because the engine writes it, and acted on by nothing.
+       *
+       *  The stock slot registers its press and click listeners behind this flag, and
+       *  reproducing that killed clicking outright - so whatever the engine is setting it
+       *  to here, a square that stops answering the mouse is never the right reading of
+       *  it. A slot activates when it is clicked. */
       public function get clickFeedback() : Boolean
       {
          return this.feedback;
@@ -276,6 +319,21 @@ package ui
          return this.pipCount;
       }
 
+      /** The colour this square is picked out in, or zero for one that is not. */
+      public function get highlight() : uint
+      {
+         return this.mark;
+      }
+
+      public function set highlight(color:uint) : void
+      {
+         if(this.mark != color)
+         {
+            this.mark = color;
+            this.paint();
+         }
+      }
+
       public function set empty(on:Boolean) : void
       {
          if(on)
@@ -305,16 +363,14 @@ package ui
          this.showQuantity = other.showQuantity;
          this.objectName = other.objectName;
          this.iconImage = other.iconImage;
+         this.highlight = other.highlight;
          this.setQuality(other.quality);
       }
 
       public function activate() : void
       {
          this.selected = false;
-         if(this.feedback)
-         {
-            ExternalInterface.call("POST_SOUND_EVENT","Play_ui_window_click_item");
-         }
+         ExternalInterface.call("POST_SOUND_EVENT","Play_ui_window_click_item");
          ExternalInterface.call("SLOT.ACTIVATE",this.slotId);
       }
 
@@ -409,16 +465,14 @@ package ui
          }
       }
 
-      /** The gap between the number and the bottom edge of the square. */
-      private static const TALLY_PAD:int = 2;
+      /** Where the number sits against the top edge of the square. Negative because a
+       *  TextField carries a two pixel gutter above its first line, so a pad of zero is
+       *  already two pixels of nothing - this puts the digits on the edge itself. */
+      private static const TALLY_PAD:int = -2;
 
       private function retally() : void
       {
          this.tally.text = this.held <= 1 ? " " : (this.withX ? "x" : "") + String(this.held);
-         /* Against the line the field actually ended up with, not against its point size:
-            a field is two pixels of gutter taller than its text, and a guessed offset is
-            a number that sits right at one square size and hangs off the next. */
-         this.tally.y = this.size - this.tally.textHeight - TALLY_PAD;
       }
 
       public function get showQuantity() : Boolean
@@ -471,8 +525,10 @@ package ui
          }
       }
 
-      /** Selection nudges the whole square inwards rather than drawing a second state,
-       *  so it costs nothing to repaint and never fights the rarity frame. */
+      /** Selection shrinks the square inwards rather than drawing a second state, so it
+       *  costs nothing to repaint and never fights the rarity frame. Centred: the offset
+       *  is half of what the shrink took off each axis, and it is applied to `body` so
+       *  the slot's own x and y stay the grid's. */
       public function get selected() : Boolean
       {
          return this.picked;
@@ -485,10 +541,8 @@ package ui
             return;
          }
          this.picked = on;
-         var nudge:Number = this.size * 0.075;
-         this.x += on ? nudge : -nudge;
-         this.y += on ? nudge : -nudge;
-         this.scaleX = this.scaleY = on ? 0.85 : 1;
+         this.body.scaleX = this.body.scaleY = on ? PRESS : 1;
+         this.body.x = this.body.y = on ? this.size * (1 - PRESS) / 2 : 0;
       }
 
       public function clear() : void
@@ -554,6 +608,7 @@ package ui
       {
          var edge:int = frameFor(this.rank);
          var span:int = this.size;
+         var inset:int = this.rank >= RADIANT ? 3 : 1;
          this.frame.graphics.clear();
          if(this.rank > 0)
          {
@@ -580,6 +635,19 @@ package ui
                renderer.fill(this.frame,2,2,span - 4,span - 4,0x95E6CB);
                renderer.fill(this.frame,3,3,span - 6,span - 6,renderer.RAISED2);
             }
+         }
+         if(this.mark != 0)
+         {
+            renderer.fill(this.frame,inset,inset,span - inset * 2,span - inset * 2,
+                          this.mark,MARK_WASH);
+         }
+         if(this.lit && !this.worn)
+         {
+            renderer.border(this.frame,0,0,span,span,renderer.VALUE,0.5);
+         }
+         if(this.fresh)
+         {
+            renderer.disc(this.frame,MARK_DOT + 1,MARK_DOT + 1,MARK_DOT,renderer.CYAN);
          }
          // Which of the three states a slot is in cannot be read from any one signal.
          // The engine writes rarity, quantity, iconImage, showQuantity and locked and
@@ -619,6 +687,31 @@ package ui
          renderer.dashed(this.frame,0,0,span,span,renderer.BORDER,0.7);
       }
 
+      private function light(on:Boolean) : void
+      {
+         if(this.lit == on || !this.hasRollOver)
+         {
+            return;
+         }
+         this.lit = on;
+         this.paint();
+      }
+
+      /** A square the engine has just put something new into. Cleared by looking at it. */
+      public function get newItem() : Boolean
+      {
+         return this.fresh;
+      }
+
+      public function set newItem(on:Boolean) : void
+      {
+         if(this.fresh != on)
+         {
+            this.fresh = on;
+            this.paint();
+         }
+      }
+
       /** Whether this slot is showing an item. */
       public function shown() : Boolean
       {
@@ -653,6 +746,10 @@ package ui
       private function onEnter(e:MouseEvent) : void
       {
          var beside:Point = this.tipAnchor != null ? this.tipAnchor(this) as Point : null;
+         this.light(true);
+         /* Looking at it is what makes it no longer new, which is what the stock slot
+            does with its glow. */
+         this.newItem = false;
          var corner:Point = beside != null ? beside : localToGlobal(new Point(width,height));
          var top:Point = null;
          ExternalInterface.call("SLOT.POINTER_ENTER",this.slotId,corner.x,corner.y);
@@ -665,6 +762,7 @@ package ui
 
       private function onLeave(e:Event) : void
       {
+         this.light(false);
          ExternalInterface.call("TOOLTIP.HIDE");
          ExternalInterface.call("SLOT.POINTER_LEAVE",this.slotId);
          this.selected = false;

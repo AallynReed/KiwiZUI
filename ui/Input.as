@@ -4,6 +4,7 @@ package ui
    import flash.events.FocusEvent;
    import flash.events.KeyboardEvent;
    import flash.events.MouseEvent;
+   import flash.geom.Point;
    import flash.text.TextField;
    import flash.text.TextFieldType;
    import flash.ui.Keyboard;
@@ -32,7 +33,10 @@ package ui
 
       public static const TYPING:String = "typing";
 
-      private static const BOX:int = 24;
+      /** The box this draws inside its row. Public because a control placed beside a
+       *  field has to match the field and not the row it sits in - matched to the row,
+       *  a button stands taller than the box it is meant to be part of. */
+      public static const BOX:int = 24;
 
       private static const SET:int = 26;
 
@@ -47,6 +51,11 @@ package ui
       private var committed:String = "";
 
       private var hot:Boolean = false;
+
+      /** Set when the container resolves presses by coordinate. The box then ignores its
+       *  own click and roll events rather than being taken off the mouse, which would
+       *  stop the field taking the caret at all. */
+      public var driven:Boolean = false;
 
       public function Input(key:String, text:String, w:int, prompt:String = "", size:int = 12)
       {
@@ -94,6 +103,11 @@ package ui
          f.mouseEnabled = false;
          f.height = this.size * 2;
          return f;
+      }
+
+      public function get boxTop() : int
+      {
+         return (this.tall - BOX) / 2;
       }
 
       public function get value() : String
@@ -144,6 +158,7 @@ package ui
          var mid:int = (this.tall - BOX) / 2;
          var empty:Boolean = this.field.text.length == 0;
          this.box.graphics.clear();
+         renderer.fill(this.box,0,0,this.w,this.tall,renderer.PANEL,0);
          renderer.framed(this.box,at,mid,wide,BOX,renderer.HEADER,this.hot ? renderer.CYAN : renderer.BORDER,1);
          this.captionAt(0,renderer.LABEL);
          this.place(this.field,at,wide,mid,renderer.VALUE);
@@ -189,15 +204,70 @@ package ui
          this.box.graphics.lineStyle();
       }
 
+      /** Which of the two things a press on this box means, from where it landed: the
+       *  cross clears it, anywhere else puts the caret in it.
+       *
+       *  The container asks, because Iggy decides which sprite a press belongs to from
+       *  what it measured a sprite's children to be - and the children of an empty
+       *  search box measure nothing at all, so the middle of it was never its own.
+       *
+       *  The point is in the container's coordinates, the same as `Hit` takes. */
+      public function press(at:Point) : Boolean
+      {
+         var edge:Number = this.x + this.boxAt + this.boxWide;
+         if(!Hit.holds(this,this.boxAt + this.boxWide,this.tall,at))
+         {
+            return false;
+         }
+         Option.click();
+         if(this.field.text.length > 0 && at.x > edge - 20)
+         {
+            this.clear();
+            return true;
+         }
+         this.focus();
+         return true;
+      }
+
+      /** The caret, put where a press cannot be trusted to put it. */
+      public function focus() : void
+      {
+         if(stage != null)
+         {
+            stage.focus = this.field;
+         }
+         this.field.setSelection(this.field.text.length,this.field.text.length);
+      }
+
+      public function lit(at:Point) : void
+      {
+         this.hovered = Hit.holds(this,this.boxAt + this.boxWide,this.tall,at);
+      }
+
+      public function set hovered(on:Boolean) : void
+      {
+         if(this.hot != on)
+         {
+            this.hot = on;
+            this.paint();
+         }
+      }
+
       private function onHover(e:MouseEvent) : void
       {
-         this.hot = e.type == MouseEvent.ROLL_OVER;
-         this.paint();
+         if(!this.driven)
+         {
+            this.hovered = e.type == MouseEvent.ROLL_OVER;
+         }
       }
 
       private function onClick(e:MouseEvent) : void
       {
          var edge:int = this.boxAt + this.boxWide;
+         if(this.driven)
+         {
+            return;
+         }
          if(this.field.text.length > 0 && this.mouseX > edge - 20 && this.mouseX < edge)
          {
             Option.click();

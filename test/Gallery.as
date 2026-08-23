@@ -248,6 +248,16 @@ package
          this.same("combo opens a layer",Layer.open,true);
          this.same("combo menu is over the panel",this.lifted(),true);
          this.same("combo menu is inside the stage",this.inside(),true);
+         this.sort.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN));
+         this.same("a press on the control that opened it closes the menu",Layer.open,false);
+         this.sort.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+         this.same("and the click that came with it leaves it closed",Layer.open,false);
+         this.sort.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+         this.same("a click of its own opens it again",Layer.open,true);
+         this.tint.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN));
+         this.same("a press on another control closes the menu",Layer.open,false);
+         this.tint.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+         this.same("and the same click opens that control's own popup",Layer.open,true);
          Layer.hide();
          this.same("layer closes",Layer.open,false);
          this.tint.dispatchEvent(new MouseEvent(MouseEvent.CLICK));

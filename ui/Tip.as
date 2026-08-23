@@ -1,6 +1,7 @@
 package ui
 {
    import flash.display.DisplayObject;
+   import flash.external.ExternalInterface;
    import flash.geom.Point;
 
    /** Where a tooltip goes when the window that asked for it has to stay readable.
@@ -51,6 +52,37 @@ package ui
        *  on, so a hover on the right edge does not send a tooltip across to the left of
        *  the window to be read. The near side only wins if it has room for one; the wider
        *  gap is still better than a tooltip half off the surface. */
+      /** Opens the game's tooltip beside the window, and answers whether it opened - so a
+       *  caller knows whether it has one to close and never hides a tooltip it did not
+       *  put up.
+       *
+       *  `spot` is where the thing being described sits in the host's own coordinates,
+       *  and the caller is what works that out. A row cannot answer it for itself: under
+       *  a `scrollRect` Iggy does not fold the scroll into the transform, so the row's own
+       *  `localToGlobal` is where it would have been with the list at the top. Add the
+       *  offsets up instead - they are all ours. */
+      public static function open(host:DisplayObject, w:Number, spot:Point,
+                                  title:String, body:String) : Boolean
+      {
+         var top:Point = null;
+         if(host == null || spot == null || body == null || body.length == 0
+            || !IggyFunctions.inIggy)
+         {
+            return false;
+         }
+         top = beside(host,w,spot.y,spot.x);
+         ExternalInterface.call("TOOLTIP.SHOW",top.x,top.y,title,body);
+         return true;
+      }
+
+      public static function hide() : void
+      {
+         if(IggyFunctions.inIggy)
+         {
+            ExternalInterface.call("TOOLTIP.HIDE");
+         }
+      }
+
       public static function beside(host:DisplayObject, w:Number, y:Number, at:Number = -1) : Point
       {
          var near:Point = host.localToGlobal(new Point(0,y));

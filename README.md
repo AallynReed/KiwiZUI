@@ -19,8 +19,11 @@ Everything here is used in production by the Zakros UI mods. Take any of it.
 | `renderer.as` | Palette, text and drawing primitives. The whole visual system. |
 | `Config.as` | Reading, seeding and writing `ModCfgs\<Mod Title>.cfg`. |
 | `Hub.as` | Declaring your mod's settings so another screen can offer them. |
+| `Api.as` | Answering instructions from other mods, on the same channel. |
 | `Legacy.as` | Reading declarations written for Criteox's Mod Setting Manager. |
 | `GemReader.as` | Gem tier, level, quality and boost maths. |
+| `Clock.as` | The wall clock, Trove's day and week resets, and durations in the game's own words. |
+| `Rotations.as` | Which cycle of a weekly rotation is running, and when the next one starts. |
 | `ui/` | 29 classes: controls, popups, item slots, tooltips and the helpers behind them. |
 | `test/` | A gallery SWF that puts every control on one screen. |
 
@@ -34,6 +37,7 @@ between a screen that loads and a screen that does not.
 - [Building a screen](docs/screens.md) — from scratch, or by replacing a class in the vanilla SWF
 - [Config files](docs/config.md) — the `ModCfgs` protocol, and how to seed defaults safely
 - [The settings hub](docs/settings-hub.md) — make your mod's options appear in one shared screen
+- [Commands between mods](docs/commands.md) — let another mod ask your screen to do something
 - [Controls](docs/controls.md) — the `ui` package, control by control
 - [Drawing](docs/renderer.md) — palette, text measurement, shapes
 - [Art](docs/art.md) — getting Trove's own pictures into a from-scratch screen
@@ -48,6 +52,11 @@ have to compile into the same tree the screen's own code lives in.
 ```
 -source-path <your src> <path to KiwiZUI>
 ```
+
+Your own sources come first on that path, so **a class of yours with a library
+class's name silently replaces it** — no warning, and the library keeps compiling
+against its own copy while your screen gets yours. Two mods had done it before anyone
+noticed. Check the names in the table above before you take one.
 
 The root classes are in the unnamed package and the controls are in `ui`, matching
 where Trove's own scripts sit. Nothing is namespaced, deliberately: `-replace` puts

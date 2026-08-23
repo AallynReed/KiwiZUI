@@ -5,7 +5,11 @@ package ui
 
    /** The narrow strip down the side of a screen that switches between them. Its only
     *  state is whether it is the current one, so it repaints whole rather than keeping
-    *  a second set of children for the selected look. */
+    *  a second set of children for the selected look.
+    *
+    *  A mark is optional. A tab given one says what it is without a caption, which is the
+    *  only thing 24 pixels of width has room for; a tab given none is the plain face it
+    *  always was. */
    public class Tab extends Sprite
    {
 
@@ -23,14 +27,29 @@ package ui
        *  everything around it. */
       private var box:Shape = new Shape();
 
+      /** The mark is its own child rather than more of the box: the face is redrawn on
+       *  every state change and the mark is not, and one shape for both would mean
+       *  clearing the drawing that does not change to repaint the one that does. */
+      private var face:Shape = new Shape();
+
+      private var mark:int = -1;
+
       private var current:Boolean = false;
 
-      public function Tab()
+      public function Tab(mark:int = -1)
       {
          super();
+         mouseChildren = false;
          addChild(this.box);
+         addChild(this.face);
+         this.mark = mark;
+         this.face.x = (W - MARK) >> 1;
+         this.face.y = (H - MARK) >> 1;
          this.paint();
       }
+
+      /** Big enough to read at 24 wide and still clear of the tab's own border. */
+      private static const MARK:int = 16;
 
       public function get selected() : Boolean
       {
@@ -53,6 +72,12 @@ package ui
                          renderer.ROW);
          renderer.fill(this.box,2,2,W - 4,H - 4,
                        this.current ? renderer.lift(renderer.RAISED6,LIT) : renderer.RAISED6);
+         this.face.graphics.clear();
+         if(this.mark >= 0)
+         {
+            Glyph.draw(this.face,this.mark,MARK,
+                       this.current ? renderer.CYAN : renderer.LABEL);
+         }
       }
    }
 }

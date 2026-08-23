@@ -1,5 +1,6 @@
 package ui
 {
+   import flash.display.DisplayObject;
    import flash.display.Shape;
    import flash.display.Sprite;
    import flash.display.Stage;
@@ -33,6 +34,9 @@ package ui
        *  control has actually been used, and the panel lets go of it when it closes. */
       public static var focused:Option;
 
+      /** The stage the press-elsewhere watch is on, so it is taken off again. */
+      private static var listening:Stage;
+
       private static const HOLD_CTRL:Number = 5;
 
       private static const MARK:Number = 2.5;
@@ -51,7 +55,7 @@ package ui
        *  nothing is left listening to a keyboard it has no controls for. */
       public static function watch(host:Stage, on:Boolean) : void
       {
-         focused = null;
+         blur();
          if(host == null)
          {
             return;
@@ -277,11 +281,63 @@ package ui
       {
          var was:Option = focused;
          focused = this;
+         if(listening != stage)
+         {
+            release();
+            listening = stage;
+            if(listening != null)
+            {
+               listening.addEventListener(MouseEvent.MOUSE_DOWN,onElsewhere);
+            }
+         }
          if(was != null && was != this)
          {
             was.paint();
          }
          this.paint();
+      }
+
+      /** Focus is taken on a press and has to be given back on one. A control the arrow
+       *  keys are on draws itself the way it draws a hover, so one that never lets go
+       *  reads as still in use - which is what the colour dropdown did, cyan bordered
+       *  long after it was shut and the pointer had gone.
+       *
+       *  Watched on the stage rather than blocked with a sheet, the way Layer watches
+       *  for the press that closes a popup: the press still reaches whatever it was
+       *  aimed at. A press that landed on a control is left alone - that control is
+       *  about to claim the focus for itself. */
+      private static function onElsewhere(e:MouseEvent) : void
+      {
+         var at:DisplayObject = e.target as DisplayObject;
+         while(at != null)
+         {
+            if(at is Option)
+            {
+               return;
+            }
+            at = at.parent;
+         }
+         blur();
+      }
+
+      public static function blur() : void
+      {
+         var was:Option = focused;
+         focused = null;
+         release();
+         if(was != null)
+         {
+            was.paint();
+         }
+      }
+
+      private static function release() : void
+      {
+         if(listening != null)
+         {
+            listening.removeEventListener(MouseEvent.MOUSE_DOWN,onElsewhere);
+            listening = null;
+         }
       }
 
       public function get literal() : String

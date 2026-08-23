@@ -208,9 +208,14 @@ package ui
          }
       }
 
+      /** A driven plate does not sound its own press, for the same reason it does not
+       *  light its own hover: the container is what decides the press was this one's. */
       private function onPress(e:MouseEvent) : void
       {
-         Option.click(this.live);
+         if(!this.driven)
+         {
+            Option.click(this.live);
+         }
       }
    }
 }

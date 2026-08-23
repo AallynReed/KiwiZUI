@@ -56,6 +56,11 @@ package ui
        *  what every other button on every screen wants. */
       public var tint:uint = 0;
 
+      /** A dot in the corner saying there is something new behind this button. The stock
+       *  screens carry it as a timeline clip on the control itself; here it is one more
+       *  thing the button draws, so it survives a repaint the way the rest of it does. */
+      public var flagged:Boolean = false;
+
       /** Iggy measures a sprite by its children and does not count the sprite's own
        *  graphics, so the frame goes in a child and not in `graphics`. Drawn into the
        *  sprite, a button with no caption measures short - and a control Iggy measures
@@ -67,6 +72,9 @@ package ui
       public var frame:Shape = new Shape();
 
       public var box:Shape = new Shape();
+
+      /** The radius of the corner dot. */
+      private static const FLAG:Number = 3;
 
       public var w:int = 0;
 
@@ -86,6 +94,7 @@ package ui
          this.h = h;
          this.mode = mode;
          this.tooltip = tooltip;
+         mouseChildren = false;
          addChild(this.frame);
          addChild(this.box);
          addChild(this.face);
@@ -126,6 +135,10 @@ package ui
          if(this.mark != null)
          {
             this.mark(this.face);
+         }
+         if(this.flagged)
+         {
+            renderer.disc(this.frame,this.w - FLAG - 2,FLAG + 2,FLAG,renderer.CYAN);
          }
          this.place();
       }

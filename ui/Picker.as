@@ -200,7 +200,7 @@ package ui
 
       private function onFace(e:MouseEvent) : void
       {
-         if(this.popup != null)
+         if(this.popup != null || Layer.shut(this))
          {
             Layer.hide();
             return;

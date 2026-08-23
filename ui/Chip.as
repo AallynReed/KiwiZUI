@@ -51,6 +51,11 @@ package ui
 
       public var tone:int = QUIET;
 
+      /** Set when the container works out the hover itself. The chip then ignores its
+       *  own roll events rather than being taken off the mouse: a control taken off the
+       *  mouse stopped clicks reaching anything at all in Iggy. */
+      public var driven:Boolean = false;
+
       private var box:Shape = new Shape();
 
       private var live:Boolean = true;
@@ -67,6 +72,14 @@ package ui
          this.w = w;
          this.h = h;
          this.tone = tone;
+         /* Iggy measures a sprite by its children and hit-tests them in their own
+            right. The two fields are cut to their own ink, so a chip with no count -
+            or one built with no words at all, which is every filter chip - carries a
+            child measuring nothing, and a control Iggy measures as zero does not miss
+            its own clicks, it takes the ones around it. Every other control in here
+            shuts its children out of the hit test; this one did not, and the last chip
+            added to a strip was taking the whole strip. */
+         mouseChildren = false;
          addChild(this.box);
          this.caption = renderer.pin(
             renderer.label(0,0,size,TextFieldAutoSize.CENTER,"",w,h,false,false,tracking(size)),w,size);
@@ -92,8 +105,6 @@ package ui
       {
          this.w = w;
          this.h = h;
-         this.caption.height = this.h;
-         this.count.height = this.h;
          this.paint();
       }
 
@@ -135,59 +146,66 @@ package ui
       {
          this.live = on;
          this.mouseEnabled = on;
-         this.mouseChildren = on;
          this.paint();
       }
 
       /** The word and the number are centred as one pair, so a chip carrying a count
-       *  reads as a single label rather than as a word with a figure pushed off it. */
+       *  reads as a single label rather than as a word with a figure pushed off it.
+       *
+       *  Both fields are cut to their own text rather than left the width of the chip
+       *  and slid sideways: the wide version put the count field forty-odd pixels past
+       *  the right edge, and a chip's clicks are its fields' as well as its box's. */
       private function place() : void
       {
          var word:Number = 0;
          var tail:Number = 0;
          var left:Number = 0;
-         this.caption.width = this.w;
-         this.count.width = this.w;
          this.caption.setTextFormat(this.caption.defaultTextFormat);
          this.count.setTextFormat(this.count.defaultTextFormat);
          word = this.caption.textWidth;
          tail = this.count.text.length == 0 ? 0 : this.count.textWidth + GAP;
          left = (this.w - (word + tail)) / 2;
-         this.caption.x = left - (this.w - word) / 2;
-         this.count.x = left + word + GAP - (this.w - this.count.textWidth) / 2;
+         renderer.hug(this.caption,left);
+         renderer.hug(this.count,left + word + GAP);
          renderer.centre(this.caption,0,this.h);
          renderer.centre(this.count,0,this.h);
       }
 
+      /** What the chip *is* goes in the body; what the pointer is *doing* goes on the
+       *  edge. Both were one `hot` before, so a latched chip already painted as though
+       *  hovered and hovering it did nothing at all - which on the club tile is Toggle
+       *  Chat, the one chip on the card that latches. Worse the other way round: an
+       *  unlatched chip under the pointer looked exactly like a latched one, so hovering
+       *  read as having already toggled it. */
       public function paint() : void
       {
-         var hot:Boolean = this.live && (this.over || this.latched);
-         var edge:uint = renderer.BORDER;
-         var inner:uint = 0;
-         var word:uint = renderer.LABEL;
+         var on:Boolean = this.live && this.latched;
+         var hot:Boolean = this.live && this.over;
+         var lit:Boolean = on || hot;
+         var edge:uint = hot ? renderer.lift(renderer.BORDER,EDGE_LIFT) : renderer.BORDER;
+         var body:uint = renderer.RAISED5;
+         var fill:Number = on ? 1 : 0;
+         var word:uint = lit ? renderer.VALUE : renderer.LABEL;
          var accent:uint = 0;
          if(this.tone == ACCENT || this.tone == GO)
          {
             accent = this.tone == GO ? renderer.GREEN : renderer.CYAN;
-            edge = hot ? renderer.sink(accent,32) : renderer.sink(accent,24);
-            inner = hot ? renderer.sink(accent,14) : renderer.sink(accent,9);
+            edge = renderer.sink(accent,hot ? 42 : 24);
+            body = renderer.sink(accent,on ? 17 : 9);
+            fill = 1;
             word = accent;
          }
-         else if(this.tone == DANGER && hot)
+         else if(this.tone == DANGER && lit)
          {
-            edge = renderer.sink(renderer.RED,30);
+            edge = renderer.sink(renderer.RED,hot ? 30 : 45);
             word = renderer.RED;
          }
-         else if(hot)
-         {
-            edge = renderer.lift(renderer.BORDER,EDGE_LIFT);
-            word = renderer.VALUE;
-         }
          this.box.graphics.clear();
-         if(this.tone == ACCENT || this.tone == GO)
-         {
-            renderer.fill(this.box,1,1,this.w - 2,this.h - 2,inner,1);
-         }
+         /* The whole rectangle, always, even where nothing is drawn in it: an outline is
+            four hairlines with a hole in the middle, and the hole is where a press lands
+            for anything still reading Iggy's own hit test. A quiet chip at rest fills at
+            nothing and reads exactly as it did. */
+         renderer.fill(this.box,0,0,this.w,this.h,body,fill);
          renderer.border(this.box,0,0,this.w,this.h,edge,1);
          this.caption.textColor = word;
          this.count.textColor = renderer.sink(word,70);
@@ -195,21 +213,44 @@ package ui
          this.place();
       }
 
+      /** A driven chip does not sound its own press: the container is what decides a
+       *  press was this chip's, and it is the one that says so. */
       private function onPress(e:MouseEvent) : void
       {
-         Option.click(this.live);
+         if(!this.driven)
+         {
+            Option.click(this.live);
+         }
+      }
+
+      public function get hovered() : Boolean
+      {
+         return this.over;
+      }
+
+      public function set hovered(on:Boolean) : void
+      {
+         if(this.over != on)
+         {
+            this.over = on;
+            this.paint();
+         }
       }
 
       private function onOver(e:MouseEvent) : void
       {
-         this.over = true;
-         this.paint();
+         if(!this.driven)
+         {
+            this.hovered = true;
+         }
       }
 
       private function onOut(e:*) : void
       {
-         this.over = false;
-         this.paint();
+         if(!this.driven)
+         {
+            this.hovered = false;
+         }
       }
    }
 }

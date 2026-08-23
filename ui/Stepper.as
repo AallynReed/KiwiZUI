@@ -97,6 +97,8 @@ package ui
       override public function paint() : void
       {
          var mid:int = (this.tall - 20) / 2;
+         this.box.graphics.clear();
+         renderer.fill(this.box,0,0,this.w,this.tall,renderer.PANEL,0);
          this.captionAt(0,renderer.LABEL);
          this.minus.x = this.lane;
          this.minus.y = mid;

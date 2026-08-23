@@ -210,6 +210,57 @@ never recovers.
 
 ---
 
+## The same instruction works once and never again
+
+**Cause.** Trove relays a config write when the value *changes*. The second
+`open = collections` written over the first is not a message at all, and the file looks
+identical either way, so there is no symptom.
+
+**Fix.** Consume it: the screen that acts on an instruction writes the key back to
+`Api.SPENT` in its own section, on a beat rather than in the handler.
+[commands.md](commands.md#an-instruction-has-to-be-consumed).
+
+---
+
+## A mod tells another mod something and nothing happens
+
+**Cause.** The other screen's window is shut. Trove does not relay config to a screen
+that is not showing - the key is written into its file and delivered when the window next
+opens, so the message arrives minutes later or not at all.
+
+**Fix.** Have a screen that is always on the glass do it. It cannot be the shut screen
+itself, which will not hear the request either. See
+[commands.md](commands.md#a-shut-window-hears-nothing).
+
+---
+
+## An ObjectPreview draws nothing and reports a size of zero
+
+**Cause.** `textureName` was never set. Building the preview and adding it to the display
+list asks the engine for nothing at all, so the bitmap stays 1 x 1 and any layout that
+measures it hides it.
+
+**Fix.** Set the name. It is the ask.
+
+---
+
+## A render target binds on the second session and not the first
+
+**Cause.** A target the game has never painted does not exist, so `CheckTextureExists`
+goes unanswered and `objectPreviewReady` never arrives. Nothing retries: setting
+`textureName` to the name it already holds is ignored.
+
+**Fix.** Ask again on a slow beat until it is answered, clearing the name first:
+
+```actionscript
+this.picture.textureName = "";
+this.picture.textureName = "_WorldMap";
+```
+
+Once bound, the bitmap tracks the target — a repaint shows without rebinding.
+
+---
+
 ## An icon loads at the wrong size
 
 **Cause.** `setTextureForBitmap(bmp, name, 48, 48)` does not scale anything; the size

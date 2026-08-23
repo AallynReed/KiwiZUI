@@ -166,7 +166,7 @@ package ui
 
       private function onFace(e:MouseEvent) : void
       {
-         if(this.menu != null)
+         if(this.menu != null || Layer.shut(this))
          {
             Layer.hide();
             return;
