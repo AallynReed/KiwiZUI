@@ -28,6 +28,10 @@ package ui
 
       public static const DANGER:int = 2;
 
+      /** The one action that takes you out of the screen and into the thing the screen
+       *  is about. Accent is for the action a panel is for; this is for leaving. */
+      public static const GO:int = 3;
+
       /** How far the edge lifts under the pointer, and how far a danger edge moves
        *  toward the danger colour. */
       private static const EDGE_LIFT:Number = 0.4;
@@ -161,11 +165,13 @@ package ui
          var edge:uint = renderer.BORDER;
          var inner:uint = 0;
          var word:uint = renderer.LABEL;
-         if(this.tone == ACCENT)
+         var accent:uint = 0;
+         if(this.tone == ACCENT || this.tone == GO)
          {
-            edge = hot ? renderer.sink(renderer.CYAN,32) : renderer.sink(renderer.CYAN,24);
-            inner = hot ? renderer.sink(renderer.CYAN,14) : renderer.sink(renderer.CYAN,9);
-            word = renderer.CYAN;
+            accent = this.tone == GO ? renderer.GREEN : renderer.CYAN;
+            edge = hot ? renderer.sink(accent,32) : renderer.sink(accent,24);
+            inner = hot ? renderer.sink(accent,14) : renderer.sink(accent,9);
+            word = accent;
          }
          else if(this.tone == DANGER && hot)
          {
@@ -178,7 +184,7 @@ package ui
             word = renderer.VALUE;
          }
          this.box.graphics.clear();
-         if(this.tone == ACCENT)
+         if(this.tone == ACCENT || this.tone == GO)
          {
             renderer.fill(this.box,1,1,this.w - 2,this.h - 2,inner,1);
          }

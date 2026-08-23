@@ -521,6 +521,44 @@ package
          return at;
       }
 
+      /** A name made to fit a box by wrapping and by shrinking, never by cutting.
+       *
+       *  `fit` is the same answer for a box one line tall. This is for one with room for
+       *  more: the field wraps at every size tried, so the first size whose wrapped text
+       *  fits both the width and the height wins - which is one line where one line will
+       *  do, and two only when no readable size fits on one.
+       *
+       *  Never truncates. A name is what the player is called and half of it with a dot
+       *  after it is a different name, so the floor is a size rather than a length, and
+       *  a string absurd enough to beat the floor is left over the edge where it can be
+       *  seen rather than silently cut.
+       *
+       *  Returns the size it settled on, and leaves the field the height its lines took
+       *  so the caller can put the next thing under it. */
+      public static function fitBox(field:TextField, wide:Number, high:Number, size:int,
+                                    floor:int) : int
+      {
+         var at:int = size;
+         var fmt:TextFormat = field.defaultTextFormat;
+         field.autoSize = TextFieldAutoSize.NONE;
+         field.multiline = true;
+         field.wordWrap = true;
+         field.width = wide;
+         while(true)
+         {
+            fmt.size = at;
+            field.defaultTextFormat = fmt;
+            field.setTextFormat(fmt);
+            if(at <= floor || (field.textWidth <= wide && field.textHeight <= high))
+            {
+               break;
+            }
+            at--;
+         }
+         field.height = deep(at,field.numLines < 1 ? 1 : field.numLines);
+         return at;
+      }
+
       /** Cuts a line down to the width it has and ends it in an ellipsis. A set of
        *  choices is written out in full where it fits, because the words are what a
        *  player picked and a count is not, and it has to stop somewhere when it does
@@ -877,18 +915,26 @@ package
        *
        *  The centre is a Number and not an int: a row of pips is placed at a fractional
        *  pitch, and rounding each one to a whole pixel is what made the gaps in a row of
-       *  five come out uneven. */
+       *  five come out uneven.
+       *
+       *  A point straight up, because that is which way a star is. The old angle was a
+       *  step and a half off and every pip on every screen sat tilted.
+       *
+       *  The outline is a fraction of the radius and not a fixed 2.5. A stroke is drawn
+       *  centred on the path, so half of it eats inwards, and the waist of a pip at the
+       *  size a five-star row is drawn at is barely two pixels across - 2.5 swallowed the
+       *  fill and left the row a smear of black. */
       public static function pip(target:*, x:Number = 0, y:Number = 0, radius:Number = 0,
                                  color:uint = 0, alpha:Number = 1) : *
       {
-         var start:Number = Math.PI / 4 - Math.PI / 20;
+         var start:Number = -Math.PI / 2;
          var inner:Number = radius / 2;
          var step:Number = Math.PI * 2 / 5;
          var point:int = 0;
          var outerAngle:Number = 0;
          var innerAngle:Number = 0;
          target.graphics.beginFill(color & 0xFFFFFF,alpha * solidity(color));
-         target.graphics.lineStyle(2.5,BLACK,0.95);
+         target.graphics.lineStyle(Math.max(0.75,radius * 0.16),BLACK,0.95);
          target.graphics.moveTo(Math.cos(start) * radius + x,Math.sin(start) * radius + y);
          while(point <= 5)
          {

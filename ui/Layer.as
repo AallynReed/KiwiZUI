@@ -3,7 +3,6 @@ package ui
    import flash.display.DisplayObject;
    import flash.display.Sprite;
    import flash.events.MouseEvent;
-   import flash.filters.BlurFilter;
    import flash.geom.Point;
 
    /** A dropdown has to draw over everything, and a control sits far too deep in the
@@ -30,32 +29,46 @@ package ui
 
       private static var frameH:int = 0;
 
+      private static var frameX:int = 0;
+
+      private static var frameY:int = 0;
+
       /** How far the dismiss sheet reaches. Drawn from well outside the window in
        *  every direction so it catches the next click wherever it lands, whatever
        *  transform the engine has the root under. */
       private static const REACH:int = 8192;
 
+      /** How far the scrim knocks the screen back, for a screen that asks for one. */
+      private static const DIM:Number = 0.5;
+
+      /** Whether the sheet is drawn as a scrim over the screen rather than left
+       *  invisible.
+       *
+       *  **The screen itself is never touched.** A filter or an alpha set on the screen
+       *  is set on the popup with it - in game the screen is the root and the popup is
+       *  its child - and blurring live text turns the whole window to mush for the sake
+       *  of a panel sitting in one corner of it. The sheet is already between the two,
+       *  so the knock-back is painted there and the popup, added over it, stays clean.
+       *
+       *  Off by default: a dropdown opening off a control is not a modal and has no
+       *  business darkening the screen behind it. */
+      public static var dim:Boolean = false;
+
       private static var sheet:Sprite;
 
       private static var showing:Sprite;
-
-      /** What to soften while a popup is up.
-       *
-       *  **It cannot be the screen.** In game a screen is the root, and the popup is a
-       *  child of the root, so anything set on the screen reaches the popup as well. A
-       *  caller that wants this puts its own content in a container and names that; one
-       *  that does not is untouched, so no screen gains a blur by surprise. */
-      public static var behind:DisplayObject;
 
       public function Layer()
       {
          super();
       }
 
-      public static function frame(w:int, h:int) : void
+      public static function frame(w:int, h:int, x:int = 0, y:int = 0) : void
       {
          frameW = w;
          frameH = h;
+         frameX = x;
+         frameY = y;
       }
 
       public static function get open() : Boolean
@@ -78,8 +91,11 @@ package ui
          }
          sheet.graphics.clear();
          renderer.fill(sheet,-REACH,-REACH,REACH * 2,REACH * 2,renderer.BLACK,0);
+         if(dim && frameW > 0 && frameH > 0)
+         {
+            renderer.fill(sheet,frameX,frameY,frameW,frameH,renderer.BLACK,DIM);
+         }
          top.addChild(sheet);
-         soften(true);
 
          var at:Point = top.globalToLocal(anchor.localToGlobal(new Point(x,y)));
          popup.x = at.x;
@@ -102,36 +118,14 @@ package ui
          {
             return;
          }
-         popup.x = Config.clamp(popup.x,0,Math.max(0,frameW - popup.width),popup.x);
-         popup.y = Config.clamp(popup.y,0,Math.max(0,frameH - popup.height),popup.y);
-      }
-
-      /** Blurred and dimmed, so the popup is the only thing in focus and the screen
-       *  behind it is plainly not what is being read.
-       *
-       *  The blur is tried and the dim is not: filters are one more thing Iggy is being
-       *  asked for, and a rejected one takes down whatever called it. Losing the blur
-       *  leaves a popup over a dimmed screen, which is the same idea more cheaply; losing
-       *  the screen does not. */
-      private static function soften(on:Boolean) : void
-      {
-         if(behind == null)
-         {
-            return;
-         }
-         try
-         {
-            behind.filters = on ? [new BlurFilter(6,6,2)] : [];
-         }
-         catch(e:Error)
-         {
-         }
-         behind.alpha = on ? 0.55 : 1;
+         popup.x = Config.clamp(popup.x,frameX,frameX + Math.max(0,frameW - popup.width),
+                                popup.x);
+         popup.y = Config.clamp(popup.y,frameY,frameY + Math.max(0,frameH - popup.height),
+                                popup.y);
       }
 
       public static function hide() : void
       {
-         soften(false);
          if(showing != null && showing.parent != null)
          {
             showing.parent.removeChild(showing);

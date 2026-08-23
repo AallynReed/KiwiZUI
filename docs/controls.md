@@ -97,6 +97,68 @@ it calls a screen by callback name. The set comes from the stock decompile, so a
 missing there is an item that silently never appears. Nothing in it may be deleted for
 looking unused.
 
+### Tooltips open outside the window
+
+`Slot.tipAnchor` is null by default and **every screen must set it**. The engine grows a
+tooltip right and down from the point it is handed and turns it round only at the edge of
+the surface — it knows nothing about our window — so a square that does not answer opens
+its tooltip straight across the panel it belongs to. Nothing at runtime says so; the
+tooltip draws, it just draws over everything.
+
+The host passed to `Tip.beside` is the **panel**, not the hovered child. Measuring beside
+the child is the same bug one step in: the child's right edge is inside the window, so the
+gap it finds is the window itself.
+
+```
+private function slotTip(child:DisplayObject) : Point
+{
+   return Tip.beside(this.panel, this.w,
+                     this.panel.globalToLocal(child.localToGlobal(new Point(0,0))).y);
+}
+```
+
+Any hover surface of the screen's own — an ingredient cell, a card, a bar — takes the same
+hook rather than anchoring by hand. Worth a build check: fail when a screen builds hover
+surfaces and sets no anchor, the way Master Forger's `verify_tips()` does.
+
+### Rarity ranks
+
+`Slot.rarity` is a rank, not a tier name. The client names all thirty-three of them as
+constants on `_kiwi.Controls.Slot`, and this is that table:
+
+| # | rarity | | # | rarity |
+|---:|---|---|---:|---|
+| −1 | Unset | | 16 | Radiant 3 |
+| 0 | Common | | 17 | Stellar 3 |
+| 1 | Uncommon | | 18 | Radiant 4 |
+| 2 | Rare | | 19 | Stellar 4 |
+| 3 | Epic | | 20 | Radiant 5 |
+| 4 | Legendary | | 21 | Stellar 5 |
+| 5 | Relic | | 22 | Crystal 1 |
+| 6 | Resplendent | | 23 | Crystal 2 |
+| 7 | Shadow 1 | | 24 | Crystal 3 |
+| 8 | Shadow 2 | | 25 | Crystal 4 |
+| 9 | Shadow 3 | | 26 | Crystal 5 |
+| 10 | Shadow 4 | | 27 | Mystic 1 |
+| 11 | Shadow 5 | | 28 | Mystic 2 |
+| 12 | Radiant 1 | | 29 | Mystic 3 |
+| 13 | Stellar 1 | | 30 | Mystic 4 |
+| 14 | Radiant 2 | | 31 | Mystic 5 |
+| 15 | Stellar 2 | | | |
+
+Three things in it will catch you out:
+
+- **Radiant and Stellar interleave.** 12, 14, 16, 18, 20 are Radiant 1-5 and the odd
+  numbers between them are Stellar 1-5. A tier is not a consecutive run of ranks in
+  general, so anything written as a range is wrong for those two.
+- **Crystal and Mystic do run consecutively**, 22-26 and 27-31, and Mystic is the tier
+  above Crystal rather than a different kind of gear. Every rule written for Crystal holds
+  for Mystic, so the test is the open-ended `rank >= 22` and never a range or a stat count.
+  Worth verifying against the stock decompile at build time: an update that inserts a tier
+  between them mis-sorts every Mystic item with nothing to say so.
+- **Unset is `-1` and typed `int`; every other rank is `uint`.** Compared carelessly it is
+  the largest number in the table rather than the smallest. Keep the rank in an `int`.
+
 ## Structure
 
 | | |

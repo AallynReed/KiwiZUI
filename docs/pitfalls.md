@@ -64,6 +64,48 @@ no listener and no event delivery, and its worst case is a highlight that does n
 
 ---
 
+## A control loses its next press after the list is rebuilt
+
+**Symptom.** A button or a checkbox on a list row does nothing the first time it is
+pressed. Press it again and it works. Reopen the window and the first press is dead
+again, on every row. Reads exactly like a hit test that is off by a few pixels, and no
+amount of fixing the geometry changes it.
+
+**Cause.** Iggy has to find a display object again after it is added to the display list,
+and until it has, it will not aim the pointer at it. A layout pass that empties its
+container and re-adds every row therefore costs every control on screen its next press.
+Where the list rebuilds in response to engine updates, that is most presses.
+
+**Fix.** Move rows, do not re-add them. Remove only what has left the list, add only what
+is new, and set `x`/`y` on the rest. Depth usually does not need restoring - list rows do
+not overlap, so nothing reads it.
+
+**It is not the click, and it is not the hit test.** Both were tried first here. Moving
+the handler to `MOUSE_DOWN` does nothing, because no event is dispatched at all; and the
+coordinates were right the whole time. Check whether the container is being emptied before
+looking anywhere else.
+
+---
+
+## A control on a list takes two presses
+
+**Symptom.** A button or a checkbox on a list row does nothing on the first press and
+works on the second. Reads exactly like a hit test that is off by a few pixels, and every
+attempt to fix the geometry changes nothing.
+
+**Cause.** `CLICK` is a matched `MOUSE_DOWN` and `MOUSE_UP` on the one control. A list
+that re-places its rows in response to engine updates moves the row out from under the
+pointer between the two, and no click is ever made. The Activity Tracker rebuilds a frame
+after any update and its activities carry clocks, so updates never stop arriving.
+
+**Fix.** Act on `MOUSE_DOWN`. It is delivered on its own and cannot be dropped by a
+re-layout, and a control that responds on the press feels immediate rather than late.
+
+Rows that never move may stay on `CLICK`. Anything on a list that re-places itself may
+not.
+
+---
+
 ## The screen dies on load and nothing is logged
 
 **Symptom.** The window opens blank, or does not open. No error, no log line, nowhere.

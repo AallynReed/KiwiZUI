@@ -46,13 +46,24 @@ package ui
          super();
       }
 
-      public static function beside(host:DisplayObject, w:Number, y:Number) : Point
+      /** `at` is where in the window the thing being described sits, and a caller that
+       *  knows it should say: the side it is nearest is the side the tooltip should open
+       *  on, so a hover on the right edge does not send a tooltip across to the left of
+       *  the window to be read. The near side only wins if it has room for one; the wider
+       *  gap is still better than a tooltip half off the surface. */
+      public static function beside(host:DisplayObject, w:Number, y:Number, at:Number = -1) : Point
       {
          var near:Point = host.localToGlobal(new Point(0,y));
          var far:Point = host.localToGlobal(new Point(w,y));
          var scale:Number = (far.x - near.x) / w;
          var right:Number = host.stage == null ? near.x : host.stage.stageWidth - far.x;
-         if(right >= near.x)
+         var room:Number = (GAP + WIDEST) * scale;
+         var toRight:Boolean = right >= near.x;
+         if(at >= 0 && (at * 2 >= w ? right : near.x) >= room)
+         {
+            toRight = at * 2 >= w;
+         }
+         if(toRight)
          {
             return new Point(far.x + GAP * scale,near.y);
          }
