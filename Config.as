@@ -20,6 +20,8 @@ package
 
       public static const PROBE:String = "is_config";
 
+      private static const LOOSE:Object = {};
+
       public static const PRESENT:String = "true";
 
       private var name:String;
@@ -67,7 +69,7 @@ package
          var soon:int = 0;
          var lower:String = key == null ? "" : key.toLowerCase();
          var text:String = value == null ? "" : String(value);
-         var news:Boolean = this.held[lower] != text;
+         var news:Boolean = this.arrived[lower] == null || this.held[lower] != text;
          this.arrived[lower] = true;
          this.held[lower] = text;
          if(lower == PROBE)
@@ -84,11 +86,20 @@ package
             delete this.mine[lower];
             return PROBE;
          }
+         if(!news && LOOSE[lower] == null)
+         {
+            return PROBE;
+         }
          if(news)
          {
             this.relay(lower,text);
          }
          return lower;
+      }
+
+      public static function always(key:String) : void
+      {
+         LOOSE[key.toLowerCase()] = true;
       }
 
       private function relay(key:String, value:String) : void

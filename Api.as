@@ -52,6 +52,7 @@ package
       public function command(key:String, run:Function, atOnce:Boolean = false) : Api
       {
          this.runs[key.toLowerCase()] = {"run":run,"now":atOnce};
+         Config.always(key);
          return this;
       }
 
