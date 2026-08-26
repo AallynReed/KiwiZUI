@@ -72,6 +72,10 @@ package ui
 
       public function set text(body:String) : void
       {
+         if(this.caption.text == body)
+         {
+            return;
+         }
          this.caption.text = body;
          this.caption.setTextFormat(this.caption.defaultTextFormat);
          this.place();

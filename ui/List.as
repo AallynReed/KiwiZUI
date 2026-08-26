@@ -208,7 +208,7 @@ package ui
          this.captionAt(0,renderer.LABEL);
          this.face.x = this.lane + 8;
          renderer.centre(this.face,mid,BOX);
-         this.face.text = this.summary;
+         renderer.say(this.face,this.summary);
          renderer.elide(this.face,this.face.width);
          this.face.textColor = empty ? renderer.LABEL : renderer.VALUE;
       }
@@ -278,7 +278,7 @@ package ui
                                                   this.wide - HEAD - PAD,20,false,true),
                                    this.wide - HEAD - PAD,13);
          this.title.x = PAD;
-         this.title.text = this.caption == null ? "" : this.caption.text;
+         renderer.say(this.title,this.caption == null ? "" : this.caption.text);
          this.title.textColor = renderer.VALUE;
          renderer.centre(this.title,0,HEAD);
          this.closer = this.closeButton();
@@ -432,11 +432,11 @@ package ui
                                            : lit ? renderer.VALUE : renderer.LABEL);
                num.x = GUTTER;
                renderer.centre(num,i * ROW,ROW);
-               num.text = String(row + 1);
+               renderer.say(num,String(row + 1));
                num.textColor = held ? renderer.CYAN : renderer.LABEL;
                text.x = TEXT_X;
                renderer.centre(text,i * ROW,ROW);
-               text.text = String(this.values[row]);
+               renderer.say(text,String(this.values[row]));
                renderer.elide(text,text.width);
                text.textColor = renderer.VALUE;
             }
@@ -456,7 +456,7 @@ package ui
          text.visible = true;
          text.x = GUTTER;
          renderer.centre(text,0,ROW);
-         text.text = this.noneText;
+         renderer.say(text,this.noneText);
          text.textColor = renderer.LABEL;
       }
 

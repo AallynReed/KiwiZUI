@@ -229,7 +229,7 @@ package ui
 
       public function setText(text:String) : void
       {
-         this.caption.text = text;
+         renderer.say(this.caption,text);
          this.caption.setTextFormat(this.caption.defaultTextFormat);
          this.place();
       }

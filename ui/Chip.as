@@ -84,9 +84,9 @@ package ui
 
       public function setText(text:String, count:String = "") : void
       {
-         this.caption.text = text;
+         renderer.say(this.caption,text);
          this.caption.setTextFormat(this.caption.defaultTextFormat);
-         this.count.text = count;
+         renderer.say(this.count,count);
          this.count.setTextFormat(this.count.defaultTextFormat);
          this.paint();
       }

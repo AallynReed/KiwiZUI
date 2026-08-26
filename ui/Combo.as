@@ -120,7 +120,7 @@ package ui
          this.captionAt(0,renderer.LABEL);
          this.face.x = this.lane + 8;
          renderer.centre(this.face,mid,BOX);
-         this.face.text = this.summary;
+         renderer.say(this.face,this.summary);
          renderer.elide(this.face,this.face.width);
          this.face.textColor = renderer.VALUE;
       }
@@ -216,7 +216,7 @@ package ui
             }
             field.x = this.boxes ? 26 : 9;
             renderer.centre(field,1 + i * ROW,ROW);
-            field.text = String(this.labels[row]);
+            renderer.say(field,String(this.labels[row]));
             renderer.elide(field,field.width);
             field.textColor = this.marked(row) ? renderer.CYAN
                             : row == this.hover ? renderer.VALUE : renderer.LABEL;

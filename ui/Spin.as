@@ -116,7 +116,7 @@ package ui
          renderer.centre(this.readout,mid,BOX);
          if(!this.editing)
          {
-            this.readout.text = this.literal + this.suffix;
+            renderer.say(this.readout,this.literal + this.suffix);
          }
          this.readout.textColor = this.editing || this.keyed ? renderer.CYAN : renderer.VALUE;
          this.minus.live = this.value > this.low;
@@ -150,7 +150,7 @@ package ui
             }
             return;
          }
-         this.readout.text = this.literal;
+         renderer.say(this.readout,this.literal);
          this.paint();
          if(this.stage != null)
          {

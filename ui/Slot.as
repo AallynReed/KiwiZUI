@@ -369,7 +369,7 @@ package ui
 
       private function retally() : void
       {
-         this.tally.text = this.held <= 1 ? " " : (this.withX ? "x" : "") + String(this.held);
+         renderer.say(this.tally,this.held <= 1 ? " " : (this.withX ? "x" : "") + String(this.held));
       }
 
       public function get showQuantity() : Boolean

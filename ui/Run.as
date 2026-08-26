@@ -54,7 +54,7 @@ package ui
             field = this.bits[i] as TextField;
             piece = i < said.length ? said[i] : null;
             field.visible = piece != null;
-            field.text = piece == null ? "" : String(piece.text);
+            renderer.say(field,piece == null ? "" : String(piece.text));
             this.gaps[i] = piece == null ? 0 : Number(piece.gap);
             if(piece != null)
             {

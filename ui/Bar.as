@@ -51,7 +51,7 @@ package ui
       {
          var fraction:Number = need <= 0 ? 0 : have / need;
          this.valueText.visible = this.showValue;
-         this.valueText.text = have + " / " + need;
+         renderer.say(this.valueText,have + " / " + need);
          this.valueText.textColor = renderer.rampFor(fraction);
          this.fillRun(fraction,renderer.blend(renderer.YELLOW,renderer.VALUE,0.4),renderer.YELLOW);
       }

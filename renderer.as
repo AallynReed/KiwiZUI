@@ -285,6 +285,16 @@ package
          return field;
       }
 
+      public static function say(field:TextField, body:String) : TextField
+      {
+         var want:String = body == null ? "" : body;
+         if(field != null && field.text != want)
+         {
+            field.text = want;
+         }
+         return field;
+      }
+
       private static function remark() : void
       {
          var field:Object = null;
@@ -369,7 +379,7 @@ package
          {
             probe = new TextField();
             probe.defaultTextFormat = new TextFormat("Open Sans",size,0,bold);
-            probe.text = "Hg";
+            renderer.say(probe,"Hg");
             m = probe.getLineMetrics(0);
             tall = m.ascent + m.descent;
             LINES[key] = (tall > 0 ? tall : probe.textHeight) + GUTTER * 2;
@@ -385,7 +395,7 @@ package
          {
             probe = new TextField();
             probe.defaultTextFormat = new TextFormat("Open Sans",size,0,bold);
-            probe.text = "Hg";
+            renderer.say(probe,"Hg");
             ASCENTS[key] = probe.getLineMetrics(0).ascent + GUTTER;
          }
          return Number(ASCENTS[key]);
@@ -508,7 +518,7 @@ package
          while(body.length > 1 && field.textWidth > wide)
          {
             body = body.substr(0,body.length - 1);
-            field.text = body + "…";
+            renderer.say(field,body + "…");
          }
       }
 
@@ -518,7 +528,7 @@ package
          while(body.length > 1 && field.numLines > lines)
          {
             body = body.substr(0,body.length - 1);
-            field.text = body + "…";
+            renderer.say(field,body + "…");
          }
       }
 

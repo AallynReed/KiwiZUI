@@ -47,7 +47,7 @@ package ui
          this.field.addEventListener(KeyboardEvent.KEY_DOWN,this.onKey);
          addChild(this.field);
          this.hint = this.build(renderer.LABEL);
-         this.hint.text = prompt;
+         renderer.say(this.hint,prompt);
          addChild(this.hint);
          if(key.length > 0)
          {
@@ -91,7 +91,7 @@ package ui
 
       public function set value(body:String) : void
       {
-         this.field.text = body == null ? "" : body;
+         renderer.say(this.field,body);
          this.committed = this.field.text;
       }
 
@@ -107,7 +107,7 @@ package ui
 
       public function clear() : void
       {
-         this.field.text = "";
+         renderer.say(this.field,"");
          this.paint();
          this.report();
       }

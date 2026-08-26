@@ -667,11 +667,11 @@ package ui
          face.wordWrap = true;
          face.multiline = true;
          face.width = LEFT - PAD * 2;
-         face.text = body;
+         renderer.say(face,body);
          while(face.numLines > LINES && body.length > 1)
          {
             body = body.substring(0,body.length - 2);
-            face.text = body + "…";
+            renderer.say(face,body + "…");
          }
          face.height = face.textHeight + 6;
       }
@@ -688,7 +688,7 @@ package ui
             this.emptyField.visible = false;
             this.readField.autoSize = TextFieldAutoSize.NONE;
             this.readField.width = this.inner;
-            this.readField.text = this.story;
+            renderer.say(this.readField,this.story);
             this.readField.height = this.readField.textHeight + 8;
             this.readField.textColor = renderer.VALUE;
             this.scroll = Config.clamp(this.scroll,0,

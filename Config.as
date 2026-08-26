@@ -16,6 +16,8 @@ package
 
       private static const TRIES:int = 3;
 
+      private static const BATCH:int = 4;
+
       public static const PROBE:String = "is_config";
 
       public static const PRESENT:String = "true";
@@ -43,6 +45,8 @@ package
       private var absent:Function;
 
       private var tries:int = 0;
+
+      private var seedAt:int = 0;
 
       private var echoed:String;
 
@@ -150,18 +154,17 @@ package
       {
          var key:String = null;
          var written:int = 0;
-         var i:int = 0;
-         while(i < keys.length)
+         while(this.seedAt < keys.length && written < BATCH)
          {
-            key = String(keys[i]);
+            key = String(keys[this.seedAt]);
             if(!this.saw(key))
             {
                this.save(key,String(defaultFor(key)));
                written++;
             }
-            i++;
+            this.seedAt++;
          }
-         return written;
+         return keys.length - this.seedAt;
       }
 
       public function watch(screen:DisplayObject, keys:Array, defaultFor:Function, missing:Function = null) : void
@@ -191,7 +194,10 @@ package
          }
          if(this.pending != null)
          {
-            this.seedMissing(this.pending,this.defaults);
+            if(this.seedMissing(this.pending,this.defaults) > 0)
+            {
+               return;
+            }
             this.loaded = true;
             this.reconcile(this.pending,this.defaults);
             this.pending = null;

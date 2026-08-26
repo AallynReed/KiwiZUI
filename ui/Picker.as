@@ -139,7 +139,7 @@ package ui
          this.captionAt(0,renderer.LABEL);
          this.hexText.x = this.lane + SIDE + 10;
          renderer.centre(this.hexText,0,this.tall);
-         this.hexText.text = this.literal;
+         renderer.say(this.hexText,this.literal);
          this.hexText.textColor = this.hot ? renderer.VALUE : renderer.LABEL;
       }
 
