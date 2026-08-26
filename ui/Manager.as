@@ -11,26 +11,6 @@ package ui
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
 
-   /** Every mod's settings in one place: what has declared itself on the left, that
-    *  mod's own options on the right.
-    *
-    *  Nothing here knows any mod but the one whose declaration it is reading. A mod
-    *  states its options into this screen's config section and this screen builds the
-    *  controls out of that statement, so a mod written after this one still appears in
-    *  it and a mod uninstalled tomorrow costs nothing to take out.
-    *
-    *  A mod is one entry however many screens it has. Each screen declares separately -
-    *  they are separate config sections and neither can read the other - so the parts
-    *  are gathered back under the mod's name here, one foldable category each.
-    *
-    *  The controls are the ones a screen's own settings panel is built from. That is
-    *  the point of the shared widgets: a foreign mod's slider is our slider, and
-    *  behaves the way every other control in every Zakros screen behaves, rather than
-    *  being a second and worse settings system living beside the first.
-    *
-    *  A change reports the SWF as well as the key, because the write does not go where
-    *  this screen's own writes go - it is addressed to the declaring mod's section,
-    *  and the host is what makes that call. */
    public class Manager extends Sprite
    {
 
@@ -40,24 +20,23 @@ package ui
 
       private static const LEFT:int = 196;
 
-      /** The shortest a mod entry can be. A mod name is long and not ours to shorten,
-       *  so an entry takes a second line when it needs one and is cut only when two
-       *  were not enough either. */
       private static const ROW:int = 30;
 
       private static const LINES:int = 2;
 
       private static const GAP:int = 7;
 
-      /** Between a category and the rows under it, and between the last of those rows
-       *  and the next category. A fold reads as a group only if the space around it is
-       *  bigger than the space inside it. */
       private static const BAND:int = 12;
 
-      /** The header buttons are square and this is that square. Their hit tests are
-       *  measured off it and never off width and height, which Iggy reports as zero for
-       *  a plate whose caption is one glyph. */
       private static const BTN:int = 22;
+
+      private static const BTN_GAP:int = 6;
+
+      public static const SWITCH:String = "switch";
+
+      private static const FIND:int = 36;
+
+      public var aside:Function;
 
       public var swf:String = "";
 
@@ -83,6 +62,11 @@ package ui
 
       private var pickRail:Shape = new Shape();
 
+      private var search:Input = new Input("","",LEFT - PAD * 2,
+                                          IggyFunctions.translate("$Marketplace_SearchButton"));
+
+      private var missField:TextField;
+
       private var picksDeep:int = 0;
 
       private var pickScroll:Number = 0;
@@ -99,9 +83,13 @@ package ui
 
       private var closeBtn:Plate = new Plate(BTN,BTN,13);
 
-      /** Only there when the mod being read brought a readme. A button that is present
-       *  and does nothing is worse than no button, and most mods will not write one. */
       private var readBtn:Plate = new Plate(BTN,BTN,13);
+
+      private var asideBtn:Plate = new Plate(BTN,BTN,13);
+
+      public var asideTitle:String = "";
+
+      public var asideTip:String = "";
 
       private var readField:TextField;
 
@@ -109,9 +97,6 @@ package ui
 
       private var reported:Boolean = false;
 
-      /** What was on screen before this opened, put back when it closes. This fills the
-       *  window, so the host's own content underneath costs legibility and buys
-       *  nothing - none of it shows and none of it can be reached. */
       private var covered:Array = [];
 
       private var span:int;
@@ -134,18 +119,36 @@ package ui
          this.panel.addChild(this.emptyField);
          this.closeBtn.text = "×";
          this.closeBtn.driven = true;
+         this.closeBtn.tipTitle = "Close";
+         this.closeBtn.tip = "Closes the window.";
+         this.closeBtn.anchor = this.headTip;
          this.panel.addChild(this.closeBtn);
          this.readBtn.text = "?";
          this.readBtn.driven = true;
+         this.readBtn.tipTitle = "About this mod";
+         this.readBtn.tip = "What the mod says about itself, in its author's words. Press it again for the settings.";
+         this.readBtn.anchor = this.headTip;
          this.panel.addChild(this.readBtn);
+         this.asideBtn.driven = true;
+         this.asideBtn.anchor = this.headTip;
+         this.panel.addChild(this.asideBtn);
          this.panel.addEventListener(MouseEvent.CLICK,this.onHeadClick);
          this.panel.addEventListener(MouseEvent.MOUSE_MOVE,this.onHeadHover);
          this.readField = renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",200,20);
          this.readField.wordWrap = true;
          this.readField.multiline = true;
          this.body.addChild(this.readField);
+         this.search.driven = true;
+         this.search.x = PAD;
+         this.search.y = HEAD + PAD;
+         this.search.addEventListener(Event.CHANGE,this.onFind);
+         this.panel.addChild(this.search);
+         this.missField = renderer.label(PAD,HEAD + PAD + FIND,11,TextFieldAutoSize.LEFT,
+                                         IggyFunctions.translate("$Marketplace_NoResults"),
+                                         LEFT - PAD * 2,32,true);
+         this.panel.addChild(this.missField);
          this.pickClip.addChild(this.picks);
-         this.pickClip.y = HEAD + PAD;
+         this.pickClip.y = HEAD + PAD + FIND;
          this.panel.addChild(this.pickClip);
          this.panel.addChild(this.pickRail);
          this.clip.addChild(this.body);
@@ -158,19 +161,6 @@ package ui
          addEventListener(MouseEvent.MOUSE_WHEEL,this.onSwallow);
       }
 
-      /** Nothing behind a modal gets the event that landed on it.
-       *
-       *  Every host screen keeps one click handler on its own root for its header
-       *  buttons, resolved by where the press landed rather than by what Iggy said it
-       *  hit - and this panel covers that header. The readme button sits on top of the
-       *  settings button that opened the panel, and the close button on top of the
-       *  host's own. Without this, one press on the readme both turns the readme on and
-       *  toggles the panel shut, and one press on close asks the game to close the whole
-       *  window.
-       *
-       *  On this rather than on the panel, so it catches everything the modal contains,
-       *  and it runs after the panel's own handlers because bubbling reaches a parent
-       *  last. */
       private function onSwallow(e:MouseEvent) : void
       {
          e.stopPropagation();
@@ -186,18 +176,8 @@ package ui
          return this.order.length;
       }
 
-      /** Handed every config key this screen receives. A declaration is taken and
-       *  answered for; anything else is the host's own setting and is left alone.
-       *
-       *  A screen that declares twice replaces its earlier statement rather than
-       *  appearing twice - the key it arrived under is that screen, so that is what
-       *  identifies it.
-       *
-       *  A statement that says what the one before it said is taken and dropped. A mod
-       *  restates itself whenever it is running while its settings are being changed
-       *  from here, and rebuilding the whole panel to redraw the value the player has
-       *  just set is work for nothing - with the controls thrown away and made again
-       *  under the pointer that set them. */
+      private var stale:Boolean = false;
+
       public function offer(name:String, value:String) : Boolean
       {
          var at:int = 0;
@@ -234,9 +214,27 @@ package ui
          }
          if(this.shown)
          {
-            this.rebuild();
+            this.restate();
          }
          return true;
+      }
+
+      private function restate() : void
+      {
+         if(Layer.open)
+         {
+            this.stale = true;
+            return;
+         }
+         this.rebuild();
+      }
+
+      private function onShut(e:Event) : void
+      {
+         if(this.stale && !Layer.open)
+         {
+            this.rebuild();
+         }
       }
 
       private function partAt(parts:Array, name:String) : int
@@ -267,9 +265,6 @@ package ui
          return one < two ? -1 : (one > two ? 1 : 0);
       }
 
-      /** The first thing the mod had to say. A mod with several screens writes its
-       *  readme on whichever one it likes and the hub shows one per mod, because the
-       *  reader picked a mod and not a screen of one. */
       private function get story() : String
       {
          var parts:Array = this.chosen;
@@ -297,18 +292,12 @@ package ui
          this.high = high;
       }
 
-      /** The host's own content is taken off screen rather than dimmed under a scrim.
-       *  A settings list is read, and reading it through a list of worlds is harder
-       *  than it needs to be for nothing gained - there is nothing behind this worth
-       *  seeing while it is open. */
       public function show(host:DisplayObjectContainer) : void
       {
          var kid:DisplayObject = null;
          var i:int = 0;
-         if(this.index < 0 && this.order.length > 0)
-         {
-            this.index = 0;
-         }
+         this.search.value = "";
+         this.pickScroll = 0;
          this.covered = [];
          while(i < host.numChildren)
          {
@@ -344,25 +333,23 @@ package ui
          }
       }
 
-      /** The rows are thrown away and made again whenever the selection changes. A
-       *  declaration can name any control of any type, so there is no stable set to
-       *  keep and reuse - and a mod that republishes with an option added has to be
-       *  able to grow a row.
-       *
-       *  A fold lives on the category, which is thrown away with everything else, so it
-       *  is carried across a rebuild by hand and forgotten when the panel closes.
-       *  Anything longer would have to be written down, and the state of a disclosure
-       *  triangle is not worth a line in a config file. */
       private function rebuild() : void
       {
          var cat:Cat = null;
          var option:Option = null;
          var specs:Array = null;
          var record:Object = null;
-         var parts:Array = this.chosen;
-         var open:Object = this.folds();
+         var parts:Array = null;
+         var open:Object = null;
          var i:int = 0;
          var j:int = 0;
+         if(this.index < 0 && this.order.length > 0)
+         {
+            this.index = 0;
+         }
+         parts = this.chosen;
+         open = this.folds();
+         this.stale = false;
          this.strip();
          if(this.reading && this.story.length > 0)
          {
@@ -390,6 +377,7 @@ package ui
                   option.reflow();
                   option.from = String((specs[j] as Object).value);
                   option.addEventListener(Event.CHANGE,this.onChange);
+                  option.addEventListener(Event.CLOSE,this.onShut);
                   this.body.addChild(option);
                   this.rows.push(option);
                }
@@ -400,17 +388,12 @@ package ui
          this.paint();
       }
 
-      /** Beside the window and at the row's own height, rather than on top of the
-       *  controls the row is explaining. Where the row is on screen is the list's own
-       *  offset less the scroll, which the panel knows and the row does not. */
       private function tipAt(option:Option) : Point
       {
          return Tip.beside(this,this.span,
                            this.clip.y + option.y - this.scroll + option.tall * 0.5);
       }
 
-      /** Which categories were folded, so a rebuild does not spring them all open again
-       *  the moment a value inside one of them changes. */
       private function folds() : Object
       {
          var cat:Cat = null;
@@ -436,6 +419,7 @@ package ui
          {
             option = this.rows[i] as Option;
             option.removeEventListener(Event.CHANGE,this.onChange);
+            option.removeEventListener(Event.CLOSE,this.onShut);
             option.removeEventListener(Event.SELECT,this.onFold);
             this.body.removeChild(option);
             i++;
@@ -451,6 +435,28 @@ package ui
       private function get view() : int
       {
          return this.high - HEAD - PAD * 2;
+      }
+
+      private function get picksView() : int
+      {
+         return this.view - FIND;
+      }
+
+      private function get matched() : Array
+      {
+         var needle:String = this.search.value.toLowerCase();
+         var out:Array = [];
+         var i:int = 0;
+         while(i < this.order.length)
+         {
+            if(needle.length == 0
+            || String(this.order[i]).toLowerCase().indexOf(needle) >= 0)
+            {
+               out.push(i);
+            }
+            i++;
+         }
+         return out;
       }
 
       private function control(spec:Object) : Option
@@ -490,6 +496,9 @@ package ui
                return new AlphaPicker(String(spec.key),String(spec.label),w);
             case Hub.INPUT:
                return new Input(String(spec.key),String(spec.label),w);
+            case Hub.LIST:
+               return new List(String(spec.key),String(spec.label),w,
+                               String(spec.prompt).length > 0 ? String(spec.prompt) : List.PROMPT);
             case Hub.HEADING:
                return new Heading(String(spec.label),w);
          }
@@ -523,13 +532,6 @@ package ui
          return total;
       }
 
-      /** The panel draws into a child Shape rather than into its own graphics. Iggy
-       *  measures a sprite by its children and ignores what it drew itself, so a panel
-       *  that painted its own background was only as wide as the controls on it - the
-       *  wheel reached it over a row and went to the *game* over every gap, zooming the
-       *  camera while this was the only thing on screen. The Shape gives the panel a
-       *  size to be aimed at; the drawing is unchanged, since a first child paints where
-       *  the sprite's own graphics did. */
       public function paint() : void
       {
          this.panelBox.graphics.clear();
@@ -545,21 +547,32 @@ package ui
          this.closeBtn.y = (HEAD - BTN) / 2;
          this.closeBtn.paint();
          this.readBtn.visible = this.story.length > 0;
-         this.readBtn.x = this.closeBtn.x - BTN - 8;
+         this.readBtn.x = this.leftOf(this.closeBtn);
          this.readBtn.y = this.closeBtn.y;
          this.readBtn.on = this.reading;
          this.readBtn.paint();
+         this.asideBtn.visible = this.aside != null;
+         this.asideBtn.mark = this.aside;
+         this.asideBtn.tipTitle = this.asideTitle;
+         this.asideBtn.tip = this.asideTip;
+         this.asideBtn.x = this.leftOf(this.readBtn);
+         this.asideBtn.y = this.closeBtn.y;
+         this.asideBtn.paint();
 
          this.guard(this.paintPicks,"picks");
          this.guard(this.paintRows,"rows");
       }
 
-      /** A screen inside Iggy cannot be attached to and a throw in a repaint leaves no
-       *  trace in any log, so the half of paint() that failed says so through the config
-       *  file - the one channel out that survives.
-       *
-       *  Once, and never again. A write per repaint is the spam that kills a screen, and
-       *  the second failure is the same failure as the first. */
+      private function leftOf(plate:Plate) : int
+      {
+         return plate.visible ? plate.x - BTN - BTN_GAP : plate.x;
+      }
+
+      private function headTip(plate:Plate) : Point
+      {
+         return Tip.beside(this,this.span,plate.y + BTN * 0.5,plate.x + BTN * 0.5);
+      }
+
       private function guard(step:Function, tag:String) : void
       {
          try
@@ -584,26 +597,33 @@ package ui
          var face:TextField = null;
          var tall:int = 0;
          var at:int = 0;
+         var shown:Array = this.matched;
+         var of:int = 0;
          var i:int = 0;
          while(this.picks.numChildren > 0)
          {
             this.picks.removeChildAt(0);
          }
-         while(i < this.order.length)
+         this.search.visible = this.order.length > 0;
+         this.search.paint();
+         this.missField.visible = this.order.length > 0 && shown.length == 0;
+         this.missField.textColor = renderer.LABEL;
+         while(i < shown.length)
          {
+            of = int(shown[i]);
             face = renderer.label(PAD,0,11,TextFieldAutoSize.LEFT,"",LEFT - PAD * 2,20);
-            this.wrapName(face,String(this.order[i]));
-            face.textColor = i == this.index ? renderer.VALUE : renderer.LABEL;
+            this.wrapName(face,String(this.order[of]));
+            face.textColor = of == this.index ? renderer.VALUE : renderer.LABEL;
             tall = Math.max(ROW,int(face.textHeight) + 12);
             pick = new Sprite();
             pick.y = at;
-            pick.name = String(i);
+            pick.name = String(of);
             pick.buttonMode = true;
             pick.mouseChildren = false;
             skin = new Shape();
             renderer.fill(skin,0,0,LEFT,tall - 1,
-                          i == this.index ? renderer.HEADER : renderer.PANEL,1);
-            if(i == this.index)
+                          of == this.index ? renderer.HEADER : renderer.PANEL,1);
+            if(of == this.index)
             {
                renderer.fill(skin,0,0,2,tall - 1,renderer.CYAN,1);
             }
@@ -619,12 +639,9 @@ package ui
          this.clipPicks();
       }
 
-      /** The mod list scrolls on its own. Seventeen mods is taller than the window and
-       *  a list that simply ran off the bottom would put the mods nobody can see at the
-       *  end of the alphabet. */
       private function clipPicks() : void
       {
-         var view:int = this.view;
+         var view:int = this.picksView;
          var run:int = 0;
          this.pickScroll = Config.clamp(this.pickScroll,0,
                                         Math.max(0,this.picksDeep - view),0);
@@ -636,17 +653,13 @@ package ui
          }
          run = Math.max(20,view * view / this.picksDeep);
          this.pickRail.x = LEFT - 5;
-         this.pickRail.y = HEAD + PAD;
+         this.pickRail.y = HEAD + PAD + FIND;
          renderer.fill(this.pickRail,0,0,3,view,renderer.HEADER,1);
          renderer.fill(this.pickRail,0,
                        this.pickScroll * (view - run) / (this.picksDeep - view),
                        3,run,renderer.BORDER,1);
       }
 
-      /** A mod name gets two lines and then gets cut. Wrapping first is what makes the
-       *  cut rare: most titles are long because they are two or three words, not
-       *  because they are one unreadable one, and a name cut at the width of the rail
-       *  loses the part that says which mod it is. */
       private function wrapName(face:TextField, name:String) : void
       {
          var body:String = name;
@@ -663,10 +676,6 @@ package ui
          face.height = face.textHeight + 6;
       }
 
-      /** Where every row goes is settled before any of them draws. A control places
-       *  what it draws against `tall`, which reflow() has already fixed, so the two are
-       *  separable - and separated they are, because a row that fails to draw then costs
-       *  its own appearance rather than the position of every row after it. */
       private function paintRows() : void
       {
          var option:Option = null;
@@ -740,6 +749,12 @@ package ui
          this.rebuild();
       }
 
+      private function onFind(e:Event) : void
+      {
+         this.pickScroll = 0;
+         this.guard(this.paintPicks,"picks");
+      }
+
       private function onFold(e:Event) : void
       {
          Option.hideTip();
@@ -761,8 +776,6 @@ package ui
          this.rebuild();
       }
 
-      /** Whichever side the pointer is over. Two lists that scroll and one wheel, so the
-       *  only sane rule is that the wheel talks to what is under it. */
       private function onWheel(e:MouseEvent) : void
       {
          var was:Number = 0;
@@ -770,7 +783,7 @@ package ui
          {
             was = this.pickScroll;
             this.pickScroll = Config.clamp(this.pickScroll + renderer.wheel(e),0,
-                                           Math.max(0,this.picksDeep - this.view),0);
+                                           Math.max(0,this.picksDeep - this.picksView),0);
             if(this.pickScroll != was)
             {
                this.clipPicks();
@@ -786,10 +799,6 @@ package ui
          }
       }
 
-      /** Reported in the declaring mod's dialect, not ours. A legacy flag is written
-       *  true and false where every control here states itself as 1 and 0, and handing
-       *  that mod our literal would read to it as off - turning the setting off rather
-       *  than on. */
       private function onChange(e:Event) : void
       {
          var record:Object = null;
@@ -812,10 +821,6 @@ package ui
          this.paintRows();
       }
 
-      /** Which screen of the mod a key belongs to, as well as what it says. Two screens
-       *  of one mod can name the same setting - they are separate sections, and a value
-       *  they share is deliberately written to both - so the record comes back with the
-       *  spec rather than the write going to whichever was looked at first. */
       private function specFor(name:String) : Array
       {
          var specs:Array = null;
@@ -839,14 +844,6 @@ package ui
          return null;
       }
 
-      /** Which header button was hit, worked out from where the pointer was rather than
-       *  from which object Iggy decided owned the click. Iggy measures a plate by its
-       *  children and gets a one-glyph caption wrong, and a control it measures wrong
-       *  takes the clicks around it as well as its own - the close button was eating
-       *  every press aimed at the readme beside it.
-       *
-       *  The rectangles are the ones paint() put the buttons on, so the hit test and the
-       *  drawing cannot disagree. */
       private function holds(plate:Plate) : Boolean
       {
          var x:Number = this.panel.mouseX;
@@ -858,6 +855,7 @@ package ui
       {
          if(this.panel.mouseY >= HEAD)
          {
+            this.search.press(new Point(this.panel.mouseX,this.panel.mouseY));
             return;
          }
          if(this.holds(this.closeBtn))
@@ -868,15 +866,20 @@ package ui
          {
             this.onRead(e);
          }
+         else if(this.asideBtn.visible && this.holds(this.asideBtn))
+         {
+            Option.click();
+            dispatchEvent(new Event(SWITCH));
+         }
       }
 
-      /** Driven from here for the same reason the clicks are: a plate left to its own
-       *  roll-over lights up for a pointer that is over the button next to it. */
       private function onHeadHover(e:MouseEvent) : void
       {
          var live:Boolean = this.panel.mouseY < HEAD;
+         this.search.lit(new Point(this.panel.mouseX,this.panel.mouseY));
          var closeHot:Boolean = live && this.holds(this.closeBtn);
          var readHot:Boolean = live && this.readBtn.visible && this.holds(this.readBtn);
+         var asideHot:Boolean = live && this.asideBtn.visible && this.holds(this.asideBtn);
          if(closeHot != this.closeBtn.hovered)
          {
             this.closeBtn.hovered = closeHot;
@@ -885,11 +888,12 @@ package ui
          {
             this.readBtn.hovered = readHot;
          }
+         if(asideHot != this.asideBtn.hovered)
+         {
+            this.asideBtn.hovered = asideHot;
+         }
       }
 
-      /** Only the panel's own close says CLOSE. A host that puts the panel away
-       *  itself is going back to its screen, and closing that screen from under it
-       *  would be a dismissal nobody asked for. */
       private function onDismiss(e:MouseEvent) : void
       {
          Option.click();

@@ -1,9 +1,5 @@
 package ui
 {
-   /** A click lands on whatever child happened to be drawn under the pointer, which is
-    *  rarely the thing that wants to know about it. Walking up from the target is what
-    *  turns that into "which slot / card / button was this", without a listener on
-    *  every part of every one of them. */
    public class Find
    {
 

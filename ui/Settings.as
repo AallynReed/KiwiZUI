@@ -10,32 +10,6 @@ package ui
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
 
-   /** The options, in the window rather than only in a file. Every control commits in
-    *  steps and one step is one config write - a config write is a record, never a
-    *  trace, and a control that wrote continuously would take the screen down. That is
-    *  why a slider says nothing until it is released and a text box says nothing until
-    *  it is ticked.
-    *
-    *  Nothing is applied from in here. A control reports its key and the literal that
-    *  would go in the file, and the screen puts both through the same reader the
-    *  config file goes through, so a value set in the window and a value set in the
-    *  file cannot come to mean two different things.
-    *
-    *  The options come from the screen. Every screen has a different set of them and
-    *  there is only one panel, so the list is the caller's and the panel is the part
-    *  that is shared. The accent colour is not: it is on every screen, so the panel
-    *  adds a picker for it unless the caller already brought one - beside the panel
-    *  colour rather than after everything else. Two colour pickers with a screen's own
-    *  options between them read as two unrelated settings.
-    *
-    *  Rows ask for their own height and the list scrolls, so a screen can put as many
-    *  options in as it has without the panel running off the top of the window.
-    *
-    *  The panel is not part of the screen until it is asked for: show() attaches it to
-    *  the screen and hide() takes it away again, so a closed panel is not a hidden
-    *  sprite the screen has to keep stepping over, and an open one is by construction
-    *  the last child and so over everything. CLOSE says it went away, whichever of the
-    *  two ways it was dismissed. */
    public class Settings extends Sprite
    {
 
@@ -43,23 +17,17 @@ package ui
 
       private static const PAD:int = 18;
 
-      /** Statics initialise in declaration order, so this one has to follow PAD or it
-       *  would be measured against a zero. */
       public static const INNER:int = W - PAD * 2;
 
       private static const GAP:int = 8;
 
       private static const HEAD:int = 38;
 
-      /** Clearance kept between the panel and the edge of the screen. */
       private static const MARGIN:int = 48;
 
-      /** The scrim is there to swallow clicks meant for the screen underneath, not to
-       *  dim it. Darkening the window made the window opacity being set through this
-       *  very panel impossible to judge, which is the one thing a settings panel must
-       *  not get in the way of. Invisible and still a filled shape: Flash hit tests
-       *  geometry rather than alpha, so nothing gets past it either way. */
       private static const SCRIM:Number = 0;
+
+      public var anchored:Boolean = false;
 
       public var key:String = "";
 
@@ -85,10 +53,6 @@ package ui
 
       private var high:int;
 
-      /** Where the host's own content starts. A screen that nudges everything clear of
-       *  its window frame leaves the panel behind, because the panel is not a child yet
-       *  when that nudge runs - so it is told, and centres on the interface rather than
-       *  on the box the interface sits in. */
       private var left:int = 0;
 
       private var top:int = 0;
@@ -139,8 +103,6 @@ package ui
          return out;
       }
 
-      /** The keys in the order the rows are laid out, so where a control ended up is
-       *  something the gallery can assert rather than something to go and look at. */
       public function get order() : String
       {
          var out:Array = [];
@@ -158,9 +120,6 @@ package ui
          return this.parent != null;
       }
 
-      /** A window that can be resized has to be able to say so: the panel centres itself
-       *  in this frame and hands the same one to Layer, so a stale size puts both in the
-       *  wrong place. */
       public function resize(span:int, high:int, left:int = 0, top:int = 0) : void
       {
          this.span = span;
@@ -169,8 +128,6 @@ package ui
          this.top = top;
       }
 
-      /** The panel is the only thing here that knows how big the screen is, so it is
-       *  what tells Layer where a popup may sit. */
       public function show(host:DisplayObjectContainer, values:Object) : void
       {
          Layer.frame(this.span,this.high);
@@ -191,6 +148,22 @@ package ui
          dispatchEvent(new Event(Event.CLOSE));
       }
 
+      public function relist(options:Array, values:Object) : void
+      {
+         while(this.body.numChildren > 0)
+         {
+            this.body.removeChildAt(0);
+         }
+         this.options = this.accented(options);
+         this.listen();
+         this.scroll = 0;
+         this.sync(values);
+         if(this.parent != null)
+         {
+            this.paint();
+         }
+      }
+
       private function listen() : void
       {
          var option:Option = null;
@@ -199,15 +172,13 @@ package ui
          {
             option = this.options[i] as Option;
             option.addEventListener(Event.CHANGE,this.onChange);
+            option.addEventListener(Event.SELECT,this.onFold);
+            option.reflow();
             this.body.addChild(option);
             i++;
          }
       }
 
-      /** Pushed in from the screen on every repaint, so the panel shows the values the
-       *  screen is actually running with and never a copy that can drift out of step
-       *  with the config file. A key the screen does not report is a palette colour,
-       *  which the renderer already holds. */
       public function sync(values:Object) : void
       {
          var option:Option = null;
@@ -225,16 +196,42 @@ package ui
          }
       }
 
+      private function onFold(e:Event) : void
+      {
+         this.paint();
+      }
+
+      private function listed(at:int) : Boolean
+      {
+         var i:int = at;
+         if(this.options[at] is Cat)
+         {
+            return true;
+         }
+         while(i > 0)
+         {
+            i--;
+            if(this.options[i] is Cat)
+            {
+               return (this.options[i] as Cat).open;
+            }
+         }
+         return true;
+      }
+
       private function get content() : int
       {
          var deep:int = 0;
          var i:int = 0;
          while(i < this.options.length)
          {
-            deep += (this.options[i] as Option).tall + GAP;
+            if(this.listed(i))
+            {
+               deep += (this.options[i] as Option).tall + GAP;
+            }
             i++;
          }
-         return deep - GAP;
+         return Math.max(0,deep - GAP);
       }
 
       private function get view() : int
@@ -252,7 +249,7 @@ package ui
          this.scrim.graphics.clear();
          renderer.fill(this.scrim,this.left,this.top,this.span,this.high,renderer.BLACK,SCRIM);
          this.panel.x = this.left + (this.span - W) / 2;
-         this.panel.y = this.top + (this.high - deep) / 2;
+         this.panel.y = this.anchored ? this.top : this.top + (this.high - deep) / 2;
          this.panel.graphics.clear();
          renderer.framed(this.panel,0,0,W,deep,renderer.PANEL,renderer.BORDER,1);
          renderer.fill(this.panel,1,1,W - 2,HEAD - 1,renderer.HEADER,1);
@@ -267,9 +264,13 @@ package ui
          while(i < this.options.length)
          {
             option = this.options[i] as Option;
-            option.y = at;
-            option.paint();
-            at += option.tall + GAP;
+            option.visible = this.listed(i);
+            if(option.visible)
+            {
+               option.y = at;
+               option.paint();
+               at += option.tall + GAP;
+            }
             i++;
          }
          this.scroll = Config.clamp(this.scroll,0,this.content - view,0);
@@ -304,10 +305,6 @@ package ui
          }
       }
 
-      /** Repainted after the screen has had the change, not before: CHANGE is dispatched
-       *  straight through, so by the time that call returns the new colour is already in
-       *  the palette and the panel can draw itself with it. Without this the one window
-       *  that cannot show what a colour does is the one being used to pick it. */
       private function onChange(e:Event) : void
       {
          var option:Option = e.currentTarget as Option;
@@ -323,11 +320,6 @@ package ui
          this.hide();
       }
 
-      /** A click that missed the panel closes it. The scrim is what stops that click
-       *  reaching the screen underneath, and it has to be listened for here rather than
-       *  on the scrim itself: a Shape is not an InteractiveObject, so a mouse listener
-       *  put on one is never called and the click went nowhere at all - the panel stayed
-       *  open and swallowed everything aimed past it. */
       private function onOutside(e:MouseEvent) : void
       {
          var hit:DisplayObject = e.target as DisplayObject;

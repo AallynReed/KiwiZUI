@@ -1,17 +1,5 @@
 package
 {
-   /** The wall clock, and spans written in the game's own words.
-    *
-    *  Trove's day rolls over at **11:00 UTC**, so the game's internal clock is real UTC
-    *  minus eleven hours - the "trove-time" frame. Everything scheduled in game is
-    *  anchored in that frame; everything here takes and returns real UTC milliseconds
-    *  and does the shift itself, so no caller has to remember which frame it is in.
-    *
-    *  **No constant in this class is a static.** A class static is set once, in
-    *  declaration order, and a class whose initialiser calls out to Iggy can be left
-    *  half-initialised - which showed up as a countdown of `0m` with a good clock going
-    *  in, and cost a long hunt. Every number here is a local, and every translation is
-    *  looked up when it is written rather than when the class loads. */
    public class Clock
    {
 
@@ -20,13 +8,6 @@ package
          super();
       }
 
-      /** The present, in UTC milliseconds, or NaN when the runtime will not give one.
-       *
-       *  Iggy is not Flash and has answered `new Date().time` with **NaN** rather than
-       *  throwing. NaN carried through the arithmetic comes out of `shortSpan` as `0m`,
-       *  a number that looks like an answer, so the reading is checked for being a time
-       *  at all rather than merely for having thrown. A caller that gets NaN draws no
-       *  countdowns; there is nothing else it can honestly do. */
       public static function now() : Number
       {
          var ms:Number = Number.NaN;
@@ -41,28 +22,22 @@ package
          return real(ms) ? ms : Number.NaN;
       }
 
-      /** Anything before 2001 is not the present either. */
       public static function real(ms:Number) : Boolean
       {
          return !isNaN(ms) && ms > 1000000000000;
       }
 
-      /** Real UTC to the frame the game schedules in. */
       public static function trove(utc:Number) : Number
       {
          return utc - 11 * 3600000;
       }
 
-      /** Which weekday it is in game, Monday zero - the numbering `populateDailyBonus`
-       *  sends. 1 January 1970 was a Thursday, so adding three makes this zero on a
-       *  Monday. */
       public static function weekday(utc:Number) : int
       {
          var day:Number = 86400000;
          return (Math.floor(trove(utc) / day) + 3) % 7;
       }
 
-      /** How long until the game's day rolls over. */
       public static function untilDailyReset(utc:Number) : Number
       {
          var day:Number = 86400000;
@@ -70,21 +45,12 @@ package
          return (Math.floor(shifted / day) + 1) * day - shifted;
       }
 
-      /** The start of the trove-day `utc` falls in, as real UTC seconds - which is how
-       *  a run of anything is recorded against a day. Seconds because that is the unit
-       *  the schedules are anchored in; everything else here is milliseconds. */
       public static function dayStart(utc:Number) : Number
       {
          var day:Number = 86400000;
          return (Math.floor(trove(utc) / day) * day + 11 * 3600000) / 1000;
       }
 
-      /** How long until the game's day rolls over on a given weekday, Monday zero. A
-       *  reset that has already happened today is the one just gone, so landing on the
-       *  day itself counts a full seven forward rather than to zero.
-       *
-       *  More than one thing in Trove turns over weekly and they do not all turn over on
-       *  the same day, so the day is an argument rather than a second copy of this. */
       public static function untilReset(utc:Number, day:int) : Number
       {
          var span:Number = 86400000;
@@ -94,19 +60,11 @@ package
          return (at + (ahead == 0 ? 7 : ahead)) * span - shifted;
       }
 
-      /** The weekly reset, which is the Monday. */
       public static function untilWeeklyReset(utc:Number) : Number
       {
          return untilReset(utc,0);
       }
 
-      /** A span in the game's own short units - "2d 04h" - down to whichever two are
-       *  worth reading. The smaller of the pair is padded so a countdown does not change
-       *  width as it runs down.
-       *
-       *  `seconds` opens the bottom of the scale, for a countdown a player watches run
-       *  out rather than one they glance at. Off, anything under a minute reads "0m",
-       *  which is what a screen with its own word for "now" wants under it. */
       public static function shortSpan(ms:Number, seconds:Boolean = false) : String
       {
          var day:Number = 86400000;
@@ -136,13 +94,6 @@ package
          return oneOf(secs,"$TimeUnit_Seconds_short");
       }
 
-      /** The two largest units the duration reaches, joined the way the language file
-       *  says to join them - vanilla's own `_kiwi.Util.TimeUtil.localizeTime`. The game
-       *  ships `$Time_Localized1` and `$Time_Localized2` and nothing wider, which is why
-       *  two units is the ceiling. `short` picks the abbreviated unit names.
-       *
-       *  Where shortSpan pads the smaller half so a countdown holds its width, this
-       *  reads as a sentence does. A screen wants one or the other, never both. */
       public static function span(ms:Number, units:int = 2, short:Boolean = true) : String
       {
          var i:int = 0;
@@ -166,9 +117,6 @@ package
          return joiner;
       }
 
-      /** The game ships exactly these four joiners and nothing wider, so they are
-       *  written out rather than built up: a key assembled from pieces is a key no
-       *  verifier can find in the language files. */
       private static function joinerKey(count:int, short:Boolean) : String
       {
          if(count <= 1)
@@ -178,15 +126,82 @@ package
          return short ? "$Time_Localized2_short" : "$Time_Localized2";
       }
 
-      /** The hour of the day a schedule names, as the game writes one. */
+      public static function wall(twelve:Boolean = false, shift:Number = 0) : String
+      {
+         var when:Date = null;
+         var ms:Number = NaN;
+         try
+         {
+            when = new Date();
+         }
+         catch(e:Error)
+         {
+            return "";
+         }
+         if(when == null || !real(when.time))
+         {
+            return "";
+         }
+         ms = when.time + (shift == 0 ? localOffset(when) : shift * 3600000);
+         return face(ms,twelve);
+      }
+
+      public static function serverWall(twelve:Boolean = false) : String
+      {
+         var ms:Number = now();
+         return real(ms) ? face(trove(ms),twelve) : "";
+      }
+
+      private static function face(ms:Number, twelve:Boolean) : String
+      {
+         var mins:int = Math.floor(ms / 60000) % 1440;
+         var h:int = 0;
+         if(mins < 0)
+         {
+            mins += 1440;
+         }
+         h = mins / 60;
+         if(!twelve)
+         {
+            return pad(h) + ":" + pad(mins % 60);
+         }
+         return String(h % 12 == 0 ? 12 : h % 12) + ":" + pad(mins % 60)
+              + (h < 12 ? " AM" : " PM");
+      }
+
+      public static function localOffset(when:Date) : Number
+      {
+         var made:Date = null;
+         var offset:Number = Number.NaN;
+         try
+         {
+            made = new Date(when.fullYearUTC,when.monthUTC,when.dateUTC,12,0,0);
+            offset = Date.UTC(when.fullYearUTC,when.monthUTC,when.dateUTC,12,0,0)
+                   - made.time;
+         }
+         catch(e:Error)
+         {
+            offset = Number.NaN;
+         }
+         if(!isNaN(offset) && offset != 0)
+         {
+            return offset;
+         }
+         offset = -Number(when.timezoneOffset) * 60000;
+         return isNaN(offset) ? 0 : offset;
+      }
+
+      private static function pad(value:int) : String
+      {
+         return value < 10 ? "0" + value : String(value);
+      }
+
       public static function hour(h:int, m:int) : String
       {
          var whole:int = h > 12 ? h - 12 : h;
          return whole + ":" + (m < 10 ? "0" + m : String(m));
       }
 
-      /** The game's own units, largest first, in milliseconds. Built when it is asked
-       *  for rather than kept as a static, the same as every other constant here. */
       private static function units() : Array
       {
          return [{"key":"$TimeUnit_Years",   "ms":31536000000},
@@ -209,15 +224,6 @@ package
          return out;
       }
 
-      /** The largest units a duration reaches, as {value, units} pairs already in the
-       *  game's own words - for a screen that has a sentence of its own to put them in
-       *  rather than the language file's joiner.
-       *
-       *  Empty when the duration does not reach even a second, so a caller can say
-       *  nothing rather than say zero.
-       *
-       *  Vanilla rounds when it is asked for one unit and floors when it is asked for
-       *  two, which is the difference between "about an hour" and "an hour and a bit". */
       public static function partsOf(ms:Number, count:int = 2, short:Boolean = true) : Array
       {
          var size:Number = NaN;
@@ -245,8 +251,6 @@ package
          return out;
       }
 
-      /** The game's own template where it resolves, and the same shape written out
-       *  where it does not. A template is a nicety; the number is the point. */
       private static function pairOf(big:int, bigKey:String, small:int, smallKey:String) : String
       {
          var pad:String = (small < 10 ? "0" : "") + small;

@@ -8,22 +8,6 @@ package ui
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
 
-   /** There is no .cfg in ModCfgs\ for this mod, so nothing it is told is kept.
-    *
-    *  The mod cannot answer this itself: OnSaveConfig only fills in keys in a file that
-    *  is already there, and no call in the bridge brings one into being. So the panel
-    *  is an instruction rather than an offer, and it comes back every session until the
-    *  file is put in place - there is nowhere to record that it was read.
-    *
-    *  It leads with closing the game, because that is the step that goes wrong. Trove
-    *  writes ModCfgs\ back out as it exits, over whatever is there, so a file dropped
-    *  in while it is running is overwritten by the copy the running client is holding -
-    *  which is the file that does not exist. The name is set apart from the sentences
-    *  for the same reason: it has to be copied exactly, and prose is not something
-    *  anyone copies exactly.
-    *
-    *  Not part of the screen until it is asked for: show() attaches it and hide() takes
-    *  it away, so an open one is by construction the last child and over everything. */
    public class Notice extends Sprite
    {
 
@@ -35,7 +19,6 @@ package ui
 
       private static const BTN:int = 30;
 
-      /** Padding inside the box the file name sits in. */
       private static const BOX:int = 8;
 
       private var scrim:Shape = new Shape();
@@ -58,9 +41,6 @@ package ui
 
       private var wide:int = MAXW;
 
-      /** Sized at show() rather than in the constructor: a screen that takes its
-       *  dimensions from the stage does not have them yet while it is building, and
-       *  MAXW is wider than the narrower panels this ships on. */
       public function Notice(title:String)
       {
          super();

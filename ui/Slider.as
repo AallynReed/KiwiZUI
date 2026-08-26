@@ -5,15 +5,6 @@ package ui
    import flash.ui.Keyboard;
    import flash.text.TextFieldAutoSize;
 
-   /** A number, dragged. The fill is the whole of it - there is no knob, because a
-    *  knob says the same thing twice and the run of colour says it flatter.
-    *
-    *  The fill follows the pointer the whole way but the value is only announced on
-    *  release, so a drag across the track is one config write and not one per pixel of
-    *  travel - a write is a record, never a trace, and a control that wrote
-    *  continuously would take the screen down with it.
-    *
-    *  A click anywhere on the track jumps there, which is the same one write. */
    public class Slider extends Option
    {
 
@@ -78,21 +69,23 @@ package ui
 
       override public function set from(raw:String) : void
       {
-         this.value = Config.number(raw,this.low,this.top,this.value);
+         this.value = Config.number(raw,this.low - this.stop,this.top,this.value);
+         this.value = this.value < this.low ? 0 : this.value;
          this.held = this.value;
       }
 
-      /** By the step, which is the smallest move the slider has: an arrow key is the
-       *  precise way to set one, so it moves by the least the control can express. */
       override public function stroke(code:uint, scale:Number) : Boolean
       {
+         var at:Number = 0;
          var by:Number = code == Keyboard.LEFT || code == Keyboard.DOWN ? -1
                        : code == Keyboard.RIGHT || code == Keyboard.UP ? 1 : 0;
          if(by == 0)
          {
             return false;
          }
-         this.value = Config.clamp(this.value + by * this.step * scale,this.low,this.top,this.value);
+         at = (this.value <= 0 ? this.low - this.stop : this.value) + by * this.step * scale;
+         this.value = at < this.low ? (this.stop > 0 ? 0 : this.low)
+                    : Config.clamp(at,this.low,this.top,this.value);
          this.paint();
          return true;
       }
@@ -106,9 +99,23 @@ package ui
          }
       }
 
+      private function get stop() : Number
+      {
+         return this.zero.length > 0 && this.low > 0 ? this.step : 0;
+      }
+
+      private function get run() : Number
+      {
+         return this.top - this.low + this.stop;
+      }
+
       private function get fraction() : Number
       {
-         return this.top == this.low ? 0 : (this.value - this.low) / (this.top - this.low);
+         if(this.run <= 0)
+         {
+            return 0;
+         }
+         return (this.value <= 0 ? 0 : this.value - this.low + this.stop) / this.run;
       }
 
       override public function paint() : void
@@ -171,13 +178,12 @@ package ui
          }
       }
 
-      /** Snapped to the step on the way in, so the value the knob shows and the value
-       *  that would be written are the same number at every point of the drag. */
       private function follow() : void
       {
          var along:Number = Config.clamp((this.mouseX - this.lane - 1) / RUN,0,1,0);
-         var steps:Number = Math.round(along * (this.top - this.low) / this.step);
-         this.value = Config.clamp(this.low + steps * this.step,this.low,this.top,this.value);
+         var steps:Number = Math.round(along * this.run / this.step);
+         var at:Number = this.low - this.stop + steps * this.step;
+         this.value = at < this.low ? 0 : Config.clamp(at,this.low,this.top,this.value);
          this.paint();
       }
    }

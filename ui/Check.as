@@ -2,9 +2,6 @@ package ui
 {
    import flash.events.MouseEvent;
 
-   /** A flag, as a box and a caption. The caption is to the right of the box rather
-    *  than in the row's name column, because the box is the thing being read and a
-    *  name that far from its own tick reads as a name for the next row down. */
    public class Check extends Option
    {
 
@@ -24,9 +21,6 @@ package ui
          addEventListener(MouseEvent.CLICK,this.onClick);
       }
 
-      /** The tick's name sits beside the box and not in the name column, so it has the
-       *  whole row to the right of the box rather than a lane stopping short of a
-       *  control that is not there. */
       override public function get nameRoom() : int
       {
          return this.w - (BOX + 10);

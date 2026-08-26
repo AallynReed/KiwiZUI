@@ -13,18 +13,6 @@ package
    import flash.ui.Keyboard;
    import ui.*;
 
-   /** Every control in the shared lib, on a stage outside the game.
-    *
-    *  Two things are being checked and they are checked differently. What a control
-    *  reports - the literal that would go in the config file, and what it makes of a
-    *  literal it is handed - is stated as assertions, because that is the half a
-    *  screen depends on and the half that can be wrong without looking wrong. How a
-    *  control draws and behaves is not assertable, so it is simply put on the stage to
-    *  be used.
-    *
-    *  Iggy is absent here, which is the point: a control that only works inside the
-    *  game cannot be tested at all, and everything that reaches for the bridge is
-    *  guarded on inIggy for exactly that reason. */
    public class Gallery extends Sprite
    {
 
@@ -47,6 +35,8 @@ package
       private var sort:Combo = new Combo("sort","Sort by",Settings.INNER,
                                          ["game","level","power","name"],
                                          ["Game order","Level","Power rank","Name"]);
+
+      private var words:List = new List("words","Watch words",Settings.INNER,"Add a word");
 
       private var tint:Picker = new Picker("value","Text color",Settings.INNER);
 
@@ -89,6 +79,7 @@ package
             new Multi("show","Show",Settings.INNER,["locked","current","maxed"],
                       ["Locked","Current class","Maxed out"]),
             new Input("title","Window title",Settings.INNER,"Effects"),
+            this.words,
             this.tint,
             this.fade]);
          this.gate.text = "SETTINGS";
@@ -141,7 +132,8 @@ package
       private function values() : Object
       {
          return {"descriptions":"1","warnred":"120","columns":"0",
-                 "sort":"power","show":"locked,maxed","title":"Effects"};
+                 "sort":"power","show":"locked,maxed","title":"Effects",
+                 "words":"gearcrafter,golden soul,fragment"};
       }
 
       private function onGate2(e:Event) : void
@@ -150,8 +142,6 @@ package
          this.gate.paint();
       }
 
-      /** Echoed the way a screen would: a control says which key moved and what the
-       *  file would hold, and nothing else about it is the panel's business. */
       private function onSetting(e:Event) : void
       {
          this.writes++;
@@ -189,6 +179,7 @@ package
          this.checkSlider();
          this.checkCombo();
          this.checkMulti();
+         this.checkList();
          this.checkPicker();
          this.checkOpacity();
          this.checkTwoPickers();
@@ -207,16 +198,6 @@ package
                                      : "\n" + this.failures + " FAILED");
       }
 
-      /** The popup path, end to end. A dropdown that draws under the panel it came
-       *  from or off the edge of the screen is the one failure a value assertion
-       *  cannot see, and it is the whole reason Layer exists. */
-      /** Where a tooltip is asked for, which has been wrong twice: once over the window
-       *  it belonged to and once two hundred pixels clear of it. The engine is absent
-       *  here and Tip is only arithmetic, so the arithmetic is what is stated.
-       *
-       *  A host is put on the stage at a known place and the anchor read back. The
-       *  right-hand case is exact - the tooltip grows away from the point it is given -
-       *  and the left-hand case is the reserve, which is tooltip.swf's own minWidth. */
       private function checkTip() : void
       {
          var host:Sprite = new Sprite();
@@ -266,6 +247,7 @@ package
          this.same("picker grid is over the panel",this.lifted(),true);
          this.same("picker grid is inside the stage",this.inside(),true);
          Layer.hide();
+         this.checkModal();
          this.fade.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
          this.same("the opacity strip is its full height",this.stripDeep(),Picker.SQUARE_H);
          Layer.hide();
@@ -275,10 +257,121 @@ package
          this.same("panel detaches",this.panel.shown,false);
       }
 
-      /** A popup belongs inside the screen that opened it, and the screen is the only
-       *  thing that knows how big that is. Measured against a frame deliberately
-       *  unlike the stage, because that is the case the game presents and the one a
-       *  stage-sized check cannot tell apart from a correct answer. */
+      private function checkModal() : void
+      {
+         var at:Rectangle = null;
+         Layer.frame(400,300);
+         this.words.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+         this.same("a list opens a layer",Layer.open,true);
+         this.same("a list is over the settings panel",this.lifted(),true);
+         this.same("a list dims the screen behind it",this.scrimmed(),true);
+         at = this.box();
+         this.same("a list opens in the middle across",Math.round(at.x + at.width / 2),200);
+         this.same("a list opens in the middle down",Math.round(at.y + at.height / 2),150);
+         this.same("a list takes the width the screen has",Math.round(at.width),360);
+         this.checkAdding();
+         Layer.hide();
+         this.same("a list closes",Layer.open,false);
+         this.checkFits();
+         Layer.frame(W,H);
+      }
+
+      private function checkAdding() : void
+      {
+         var panel:Sprite = this.getChildAt(this.numChildren - 1) as Sprite;
+         var box:Input = this.typedInto(panel);
+         var button:Plate = this.tickOn(panel);
+         this.same("the panel has a box to type in",box != null,true);
+         this.same("and a tick beside it",button != null,true);
+         if(box == null || button == null)
+         {
+            return;
+         }
+         this.writes = 0;
+         box.value = "gilded";
+         box.dispatchEvent(new Event(Input.TYPING));
+         box.dispatchEvent(new Event(Event.CHANGE));
+         this.same("typing adds nothing",this.words.count,3);
+         this.same("and typing writes nothing",this.writes,0);
+         button.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+         this.same("the tick is what adds",this.writes,1);
+         this.checkHolding();
+      }
+
+      private function checkHolding() : void
+      {
+         var held:String = this.words.literal;
+         this.same("the panel is still open",Layer.open,true);
+         this.words.from = "";
+         this.same("an open list refuses an empty value",this.words.literal,held);
+         this.words.from = "one,two";
+         this.same("and refuses a stale one",this.words.literal,held);
+         this.words.move(0,1);
+         this.same("and is still the one being reordered",this.words.literal != held,true);
+         held = this.words.literal;
+         Layer.hide();
+         this.same("what was reordered survives the close",this.words.literal,held);
+         this.words.from = "one,two";
+         this.same("a closed list takes a value like any other",this.words.literal,"one,two");
+         this.words.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+      }
+
+      private function checkFits() : void
+      {
+         var held:String = this.words.literal;
+         var many:Array = [];
+         var i:int = 0;
+         while(i < 40)
+         {
+            many.push("value " + i);
+            i++;
+         }
+         this.words.from = many.join(",");
+         this.words.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+         this.same("a long list still fits the screen",this.box().height <= 300,true);
+         Layer.hide();
+         Layer.frame(900,700);
+         this.words.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+         this.same("and stops widening at its own ceiling",Math.round(this.box().width),460);
+         Layer.hide();
+         Layer.frame(400,300);
+         this.words.from = held;
+      }
+
+      private function typedInto(panel:Sprite) : Input
+      {
+         var i:int = 0;
+         while(i < panel.numChildren)
+         {
+            if(panel.getChildAt(i) is Input)
+            {
+               return panel.getChildAt(i) as Input;
+            }
+            i++;
+         }
+         return null;
+      }
+
+      private function tickOn(panel:Sprite) : Plate
+      {
+         var i:int = 0;
+         while(i < panel.numChildren)
+         {
+            if(panel.getChildAt(i) is Plate)
+            {
+               return panel.getChildAt(i) as Plate;
+            }
+            i++;
+         }
+         return null;
+      }
+
+      private function scrimmed() : Boolean
+      {
+         var at:Rectangle = this.getChildAt(this.numChildren - 2).getBounds(this);
+         return at.width >= W && at.height >= H;
+      }
+
       private function checkFramed() : void
       {
          Layer.frame(420,320);
@@ -309,11 +402,6 @@ package
          return Math.round(at.left) == 0 && Math.round(at.top) == 0;
       }
 
-      /** Committing closes the popup, and the click that committed is still being
-       *  delivered: Flash finishes the sequence and hands CLICK to a sprite whose
-       *  picker has already let go of it. A handler that reads the popup from there
-       *  finds nothing and takes the screen down with it - so nothing may be listening
-       *  on a popup that has been torn down, and a late event has to be a no-op. */
       private function checkTornDown() : void
       {
          this.fade.dispatchEvent(new MouseEvent(MouseEvent.CLICK));
@@ -326,16 +414,11 @@ package
          this.same("a torn down popup is deaf",this.writes,0);
       }
 
-      /** Over the panel means later in the root's own child list, which is the only
-       *  thing that decides what covers what. */
       private function lifted() : Boolean
       {
          return this.getChildIndex(this.panel) < this.numChildren - 1;
       }
 
-      /** The opacity strip is drawn a band at a time, so it is the piece most likely
-       *  to come out short if the loop is ever fed a bad height - and being its own
-       *  sprite, its bounds are exactly the strip and nothing else. */
       private function stripDeep() : int
       {
          var field:Sprite = (this.getChildAt(this.numChildren - 1) as Sprite).getChildAt(0) as Sprite;
@@ -343,12 +426,6 @@ package
          return Math.round(bar.getBounds(bar).height);
       }
 
-      /** The two controls differ by one strip and nothing else, so the popup differs
-       *  by exactly that strip and its gap. */
-      /** The picker's position has to survive its own commit coming back round. A
-       *  colour cannot say which corner of the square the pointer was in - black is
-       *  black at every saturation - so rebuilding the position from the value the
-       *  screen just echoed moves the crosshair out from under the hand holding it. */
       private function checkEcho() : void
       {
          this.fade.from = "#5FD3E8";
@@ -365,11 +442,6 @@ package
          this.same("black keeps the hue it was showing",this.fade.hue > 0,true);
       }
 
-      /** What the screen does to the picker while it is being used. A repaint pushes
-       *  the committed value into every control, and for a colour that means rebuilding
-       *  a position out of something that cannot describe one - so an open picker
-       *  refuses the push. Pick a hue, touch the square, and the hue has to still be
-       *  the one that was picked. */
       private function checkPushed() : void
       {
          this.panel.show(this,this.values());
@@ -411,9 +483,6 @@ package
          this.same("an alpha picker keeps it",this.fade.literal,"#FF880080");
       }
 
-      /** A colour is arrived at, not chosen in one go, so committing must not take
-       *  the popup away. Driven through the control's own commit rather than a click,
-       *  which needs a pointer this has no way to place. */
       private function stillOpen() : Boolean
       {
          this.tint.from = "#FF8800";
@@ -427,11 +496,6 @@ package
          return box.left >= 0 && box.top >= 0 && box.right <= W && box.bottom <= H;
       }
 
-      /** What a control reports can be asserted; where it draws mostly cannot. This is
-       *  the part that can: the capitals of every caption and readout have to land on
-       *  the middle of the box drawn around them, and a control that centres on the
-       *  wrong height misses by two or three pixels - which is invisible to a test
-       *  that only reads values and obvious to anyone looking at the screen. */
       private function checkCentring() : void
       {
          var plate:Plate = new Plate(58,24,11);
@@ -445,9 +509,6 @@ package
          this.centred("a text box sits centred",this.search.field,2,24);
       }
 
-      /** Measured the way it is seen: the baseline is where Flash says it is, the
-       *  capitals reach 0.714 em above it - that ratio is the font's, out of the file
-       *  the game ships - and the middle of that band is what reads as centred. */
       private function centred(name:String, f:TextField, top:Number, h:Number) : void
       {
          var size:Number = Number(f.defaultTextFormat.size);
@@ -466,10 +527,6 @@ package
                   + (ok ? "" : "  got " + got + ", want " + want));
       }
 
-      /** The arrows, and the bargain they make about writing. A held key repeats at
-       *  whatever rate the machine feels like, so a control that reported per repeat
-       *  would put a run of config writes through the bridge and take the screen down
-       *  with it - the value moves on every stroke and is reported once, on settle. */
       private function checkKeys() : void
       {
          var s:Slider = new Slider("a","A",300,0,100,5);
@@ -543,9 +600,6 @@ package
          this.same("stepper keeps 2 places",a.literal,"0.95");
       }
 
-      /** The typed half is what separates this from Stepper, so what a typed figure is
-       *  allowed to be is the part worth stating: held to the limits, and not to the
-       *  step, because someone who typed a number said which one they meant. */
       private function checkSpin() : void
       {
          var s:Spin = new Spin("gap","Gap",300,40,4,2);
@@ -610,8 +664,38 @@ package
          this.same("multi empties",m.literal,"");
       }
 
-      /** Fully opaque writes the short form, so a config file that never touches
-       *  transparency reads exactly as it always did. Anything less carries the AA. */
+
+      private function checkList() : void
+      {
+         var l:List = new List("words","Words",300);
+         this.same("a list starts empty",l.literal,"");
+         this.same("an empty list says none",l.summary,"None");
+         l.from = "gearcrafter,golden soul,fragment";
+         this.same("a list keeps what it was given",l.literal,"gearcrafter,golden soul,fragment");
+         this.same("a list keeps the order it was given",l.count,3);
+         this.same("a list names what is in it",l.summary,"gearcrafter, golden soul, fragment");
+         l.from = " fragment , gearcrafter ";
+         this.same("a list trims each value",l.literal,"fragment,gearcrafter");
+         this.same("a list keeps a space inside one",l.summary,"fragment, gearcrafter");
+         l.from = "one,,two,one, ,two";
+         this.same("a list drops the empty and the repeated",l.literal,"one,two");
+         l.from = "primal paragon cube";
+         this.same("a list takes a single value",l.literal,"primal paragon cube");
+         l.from = "";
+         this.same("a list empties",l.literal,"");
+         this.same("and says none again",l.summary,"None");
+         l.from = "one,two,three,four";
+         l.move(0,2);
+         this.same("a moved value lands where it was put",l.literal,"two,three,one,four");
+         l.move(3,0);
+         this.same("and the rest close up behind it",l.literal,"four,two,three,one");
+         l.move(1,1);
+         this.same("a move to where it already is changes nothing",l.literal,"four,two,three,one");
+         l.move(0,9);
+         this.same("a move off the end changes nothing",l.literal,"four,two,three,one");
+
+      }
+
       private function checkOpacity() : void
       {
          var p:AlphaPicker = new AlphaPicker("accent","Accent",300);
@@ -657,13 +741,6 @@ package
          this.same("input clears",i.literal,"");
       }
 
-      /** Every colour a player can reach has to survive the trip out to hue,
-       *  saturation and value and back, or a picker opened on a colour would move it
-       *  before it was touched. Greys, the pure hues and the palette are where the
-       *  conversion is most likely to be wrong. */
-      /** The accent picker the panel adds itself goes next to the panel colour, not
-       *  after whatever else the screen brought. Two colour pickers with a screen's
-       *  own options between them read as two unrelated settings. */
       private function checkAccentPlacement() : void
       {
          var mid:Settings = new Settings(W,H,[
@@ -698,10 +775,6 @@ package
          }
       }
 
-      /** Whether a colour can carry its own transparency in the top byte and still be
-       *  handed to everything that takes a colour. The primitives can mask it off
-       *  themselves; a TextField is Flash's and does what it does, and if it keeps the
-       *  byte then every label in five mods would come out the wrong colour. */
       private function checkPacked() : void
       {
          var f:TextField = new TextField();
@@ -712,10 +785,6 @@ package
          this.same("a packed colour still draws",Math.round(g.width),10);
       }
 
-      /** A translucent palette colour has to reach the graphics call as a colour and
-       *  an alpha, and every plain literal already written into these screens has to
-       *  go on meaning opaque. Measured through alphaOf, which is what the primitives
-       *  fold in. */
       private function checkPalette() : void
       {
          renderer.apply("accent","#5FD3E8");
@@ -734,13 +803,6 @@ package
                    renderer.alphaOf("accent"),1);
       }
 
-      /** Every config key drives its own colour and no two share one.
-       *
-       *  Trove relays a section one key per call, so two keys pointing at one colour
-       *  means the second silently undoes the first on every load - a chosen accent
-       *  saved correctly and then overwritten by the untouched alias further down the
-       *  same file, which reads exactly like a write that never happened. Each key is
-       *  given a colour of its own and every one has to still be wearing it. */
       private function checkKeysDistinct() : void
       {
          var keys:Array = renderer.KEYS;

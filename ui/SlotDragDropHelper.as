@@ -60,10 +60,6 @@ package ui
          internalStartDrag(param1.stageX,param1.stageY);
       }
       
-      /** Told when a drag actually leaves the ground, for a screen that wants to show
-       *  where the thing can be let go of. The drop is the engine's to report and comes
-       *  back through registerDropCallback; this is the other end of it, and nothing in
-       *  here has ever said so. */
       public static var dragStarted:Function = null;
 
       private static function internalStartDrag(param1:Number, param2:Number) : void
@@ -89,4 +85,3 @@ package ui
       }
    }
 }
-

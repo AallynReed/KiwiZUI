@@ -6,31 +6,6 @@ package ui
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
 
-   /** A colour, off a square and a hue strip - the picker everyone already knows how
-    *  to work. This one is opaque; AlphaPicker is the same control with an opacity
-    *  strip beside the hue, and a screen picks whichever of the two its setting means.
-    *  Most colours are not transparency settings, and a strip offered where it has no
-    *  meaning is a strip somebody will move.
-    *
-    *  A drag would once have been out of the question here: a config write is a
-    *  record, never a trace, and one write per pixel of travel takes the screen down.
-    *  Slider settled that - follow the pointer the whole way, say nothing until it is
-    *  released - so the square drags freely and the whole gesture is one write.
-    *
-    *  The square is the HSV plane itself, not a picture of one. Every component of
-    *  hsv() is linear in value, so hsv(h,s,v) is v times hsv(h,s,1), and the column at
-    *  saturation s is exactly a gradient from hsv(h,s,1) down to black. One such
-    *  gradient per pixel of width is the whole square, correct to the pixel, and built
-    *  from the plain two-stop fills the rest of the screen is already drawn with - no
-    *  transparent overlay, and nothing Iggy has not already been shown to take.
-    *
-    *  Redrawn only when the hue moves, so dragging inside the square moves a crosshair
-    *  and not 188 gradients a frame.
-    *
-    *  Picking does not close it. A colour is arrived at rather than chosen - hue, then
-    *  saturation, then a nudge of value - and a picker that shut after each of those
-    *  would make one decision into three trips. It closes where every other popup
-    *  does: the next click somewhere else. */
    public class Picker extends Option
    {
 
@@ -60,16 +35,8 @@ package ui
 
       public var opacity:Number = 1;
 
-      /** Set by AlphaPicker and by nothing else. The two controls are one
-       *  implementation because they differ by a strip and a pair of hex digits, and
-       *  two copies of a colour square would be two things to keep in step. */
       protected var translucent:Boolean = false;
 
-      /** Where the crosshair and the hue knob are. The colour is the truth and these
-       *  are only a position, but they hold more than the colour does: every grey is
-       *  hue nothing, and every black is saturation nothing, so a position cannot be
-       *  rebuilt from a colour without losing the corner of the square the pointer was
-       *  actually in. */
       public var hue:Number = 0;
 
       public var sat:Number = 0;
@@ -112,8 +79,6 @@ package ui
          addEventListener(MouseEvent.CLICK,this.onFace);
       }
 
-      /** The opacity strip is the only thing between the two controls, so every
-       *  measurement that depends on it is taken from here. */
       public function get content() : int
       {
          return SQUARE_W + PAD + STRIP + (this.translucent ? PAD + STRIP : 0);
@@ -135,16 +100,6 @@ package ui
                                  : "#" + Config.hex(this.color);
       }
 
-      /** An open picker is the authority on its own value, and the screen is only
-       *  echoing what the picker told it.
-       *
-       *  The screen repaints for its own reasons - a stat arriving, a row sorting, a
-       *  config key coming back - and every repaint pushes the committed value into
-       *  every control. For most of them that is exactly right. For this one it is
-       *  not: a colour cannot say which corner of the square the pointer was in, so
-       *  rebuilding the position from it drops the hue the moment the square is
-       *  touched, which is the reset you see. While the popup is up, nothing outside
-       *  gets to move the marks; a value it already holds is not news either. */
       override public function set from(raw:String) : void
       {
          var shade:uint = Config.color(raw,this.color);
@@ -157,10 +112,6 @@ package ui
          this.take(shade);
       }
 
-      /** The colour is what is stored and what is written; hue, saturation and value
-       *  are only where the square has to put its crosshair. A grey reports no hue, so
-       *  the hue it was already showing is kept - otherwise dragging a colour down to
-       *  black would lose it and come back up red. */
       private function take(shade:uint) : void
       {
          var hsv:Array = renderer.hsvOf(shade);
@@ -211,9 +162,6 @@ package ui
          this.paint();
       }
 
-      /** Layers, because they redraw at different rates: the plane is the hue's, the
-       *  bar is the colour's, the marks are the pointer's, and the hex box has to keep
-       *  its own children live to be typed into. */
       private function build() : void
       {
          this.popup = new Sprite();
@@ -241,10 +189,6 @@ package ui
          this.refresh();
       }
 
-      /** One gradient per column of the square, each exactly the value axis at that
-       *  saturation. Skipped unless the hue has actually moved, which is why the
-       *  opacity strip - which follows the colour rather than the hue - is a second
-       *  sprite and not another few lines in here. */
       private function paintPlane() : void
       {
          var i:int = 0;
@@ -267,11 +211,6 @@ package ui
          renderer.hueStrip(this.plane,HUE_X,PAD,STRIP,SQUARE_H);
       }
 
-      /** The colour at every opacity, over the lattice, as one solid band per pixel.
-       *  A gradient that fades its own alpha would be one call instead of a hundred
-       *  and fifty, and would be the first thing on this screen to ask Iggy for a
-       *  gradient it has never been shown to take. Bands are the same primitive every
-       *  other panel is drawn with. */
       private function paintBar() : void
       {
          var i:int = 0;
@@ -309,9 +248,6 @@ package ui
          renderer.border(this.marks,x - 1,y - 2,STRIP + 2,5,0xFFFFFF,1,1);
       }
 
-      /** The popup and the row, showing the same colour. Cheap during a drag: the
-       *  square is skipped unless the hue is what moved, and the strip unless the
-       *  colour is. */
       private function refresh() : void
       {
          if(this.popup == null)
@@ -338,9 +274,6 @@ package ui
              && this.field.mouseY >= PAD && this.field.mouseY < PAD + SQUARE_H;
       }
 
-      /** The one way in, and where the press landed is the whole gesture. Nothing here
-       *  answers CLICK: a drag that ended somewhere unfortunate used to fire a second
-       *  handler and write a second, wrong colour. */
       private function onPress(e:MouseEvent) : void
       {
          if(this.inColumn(HUE_X))
@@ -366,10 +299,6 @@ package ui
          this.field.stage.addEventListener(MouseEvent.MOUSE_UP,this.onRelease);
       }
 
-      /** The stage is everyone's, so a listener left on it outlives the popup that
-       *  registered it and goes on answering for a control that is no longer there.
-       *  held says this picker is the one dragging; release() is the only way off the
-       *  stage, and closing the popup goes through it too. */
       private function onDrag(e:MouseEvent) : void
       {
          if(!this.held || this.field == null)
@@ -401,9 +330,6 @@ package ui
          }
       }
 
-      /** Which axis is moving is fixed at the press rather than re-read each move: a
-       *  pointer that wanders off a strip mid-drag should go on moving that strip, the
-       *  way every other picker behaves. */
       private function follow() : void
       {
          var along:Number = Config.clamp((this.field.mouseY - PAD) / (SQUARE_H - 1),0,1,0);
@@ -424,8 +350,6 @@ package ui
          this.refresh();
       }
 
-      /** The hex box commits on its tick, never on a keystroke, so a colour typed a
-       *  character at a time is still one write. */
       private function onHex(e:Event) : void
       {
          if(this.translucent)
@@ -436,10 +360,6 @@ package ui
          this.commit();
       }
 
-      /** One write, and the popup stays. The popup's own border is drawn out of the
-       *  palette the write may have just changed, so both layers are marked stale and
-       *  redrawn after the screen has taken the new value - not before, or they would
-       *  repaint with the colour that is on its way out. */
       private function commit() : void
       {
          this.paint();

@@ -1,16 +1,5 @@
 package
 {
-   /** Reads a gem back out of what is on screen: how many boosts sit on each stat,
-    *  how far each roll got through its band, and one overall grade.
-    *
-    *  Two ways in, because the two screens know different things. The gem screen is
-    *  handed the numbers outright and calls observe(); the tooltip only has its own
-    *  rows and calls readRow() for each, which picks the same three facts out of the
-    *  translated text. Stats arrive through take() either way.
-    *
-    *  Power Rank is required. It is an integer the game prints outright and it is
-    *  linear in the rolls, so it both settles which boost layout is real and gives
-    *  the exact quality - the printed stats are rounded and can do neither. */
    public class GemReader
    {
 
@@ -21,16 +10,10 @@ package
       private static const PR_BANDS:Array = [[[85,113],[113,150]],[[150,200],[200,266]],
                                              [[175,250],[220,280]],[[200,260],[240,300]]];
 
-      private static const STEPS:int = 40;
-
       private static const MODEL_SLACK_MIN:Number = 15;
 
       private static const MODEL_SLACK_REL:Number = 0.006;
 
-      /** A stat rolled to its cap prints a value that puts the roll exactly on the
-       *  tolerance, and the two sides of that comparison are reached by different
-       *  arithmetic - so the last bit decides it, and a perfect gem was thrown out
-       *  as impossible. Slack no real roll fits in: the grid is 1/40 wide. */
       private static const EDGE:Number = 1e-9;
 
       private static const BANDS:Array = [
@@ -152,10 +135,6 @@ package
          return _quality;
       }
 
-      /** Whether the tooltip this is reading belongs to a gem at all. Level and
-       *  rarity are the two rows only a gem prints, so either one settles it; Power
-       *  Rank does not, because gear prints that too. Everything the reader does
-       *  beyond noticing these waits on it. */
       public function get isGem() : Boolean
       {
          return _level > 0 || _tier >= 0;
@@ -176,9 +155,6 @@ package
          return _tier < 0 ? 0 : int(CAP_LEVEL[_tier]);
       }
 
-      /** The ceiling: what the gem will have at level 15, not what it has now. A
-       *  milestone either adds a missing stat or boosts one, so a gem short a stat
-       *  has to spend one gaining it. Anything under 3 can never be maxed. */
       public function get attainable() : int
       {
          return total(boosts) + Math.max(0,columns.length - Math.min(3,int(_level / 5)));
@@ -211,17 +187,6 @@ package
          _tier = tierOf(rarity);
       }
 
-      /** The tooltip has no numbers to hand, only its own rows. Level, Power Rank,
-       *  rarity and the game's word for Empowered all arrive as translated text.
-       *
-       *  Every row of every tooltip in the game comes through here, so the rows that
-       *  say nothing have to leave cheaply. Level, rarity and Power Rank are three
-       *  prefix tests and cost nothing, and all three are read whatever the item is
-       *  - the rows arrive in the engine's order, not ours, and a gem whose rank was
-       *  skipped for arriving early cannot be graded at all. Only the search for the
-       *  Empowered mark waits on the item being a gem, because only that one has to
-       *  walk the line. Answers whether the row was the grade one, which the caller
-       *  would otherwise have to find out by scanning it again. */
       public function readRow(line:String) : Boolean
       {
          var i:int = 0;
@@ -250,17 +215,11 @@ package
          return true;
       }
 
-      /** A prefix test, not a search. indexOf walks the whole line before admitting
-       *  the head is not at the front of it, which on a page of lore is the entire
-       *  page; lastIndexOf bounded at zero only ever looks at position zero. */
       private static function starts(line:String, head:String) : Boolean
       {
          return head.length > 0 && line.lastIndexOf(head,0) == 0;
       }
 
-      /** The printed value is stripped once and both the number and its decimal
-       *  places read off the one result. Stripping it twice - once for each - was
-       *  eight throwaway arrays and eight throwaway strings per stat. */
       public function take(name:String, value:String) : Boolean
       {
          var column:int = 0;
@@ -288,18 +247,6 @@ package
          return true;
       }
 
-      /** Every legal boost layout, on both sockets, checked against the Power Rank.
-       *  The layouts are counted out directly rather than filtered out of a cube of
-       *  every combination - three quarters of that cube spends more boosts than the
-       *  level has and was only ever built to be thrown away. The nesting runs the
-       *  last stat outermost so the order the layouts arrive in is the order the
-       *  cube gave them, which is what decides a tie between two equal fits.
-       *
-       *  A layout whose rolls fall outside their band is impossible; of the rest the
-       *  one whose predicted rank lands nearest wins. A full reading beats a short
-       *  one on a tie - a wrong "Bad Gem" could make someone scrap a good gem, so
-       *  the guess never goes that way. The socket read off the tooltip is tried
-       *  first, so it takes ties too. */
       public function solve() : Boolean
       {
          var socket:int = 0;
@@ -365,7 +312,7 @@ package
          {
             return false;
          }
-         snapRolls();
+         refineRolls();
          _starved = attainable < 3;
          _quality = ranked();
          if(_quality < 0)
@@ -376,13 +323,6 @@ package
          return true;
       }
 
-      /** Everything in a candidate's arithmetic that the candidate itself does not
-       *  change: the tier and socket's own bands, the lift the level has already
-       *  paid, and each printed stat reduced against its band. Forty candidates a
-       *  socket used to dig all of it back out of three levels of nested Array and
-       *  recompute it every time, which is most of what solving a gem cost. It
-       *  depends on the socket and nothing else, so it is worked out once and the
-       *  sweep is left with the boost counts. */
       private function prepare(socket:int) : void
       {
          var i:int = 0;
@@ -424,14 +364,14 @@ package
             containers = int(want[i]) + 1;
             give = Number(giveNum[i]) / (Number(wide[i]) * containers);
             roll = (Number(lead[i]) / containers - Number(low[i])) / Number(wide[i]);
-            if(roll < -give - EDGE || roll > 1 + give + EDGE)
+            if(roll < -2 * give - EDGE || roll > 1 + give + EDGE)
             {
                return false;
             }
             roll = roll < 0 ? 0 : (roll > 1 ? 1 : roll);
             fitRolls.push(roll);
             bound += prSpan * containers * give;
-            guess += (prLow + prSpan * roll) * containers;
+            guess += (prLow + prSpan * (roll + give)) * containers;
             i++;
          }
          fitErr = Math.abs(guess - rank);
@@ -452,63 +392,44 @@ package
          }
       }
 
-      /** A roll only ever moves one focus at a time, 2.5% of a container, so a stat
-       *  with C containers sits on the 1/(40C) grid and nowhere else. The printed
-       *  number is truncated, which throws away up to a whole print unit; snapping
-       *  puts it back. Only where the printed value names exactly one grid point
-       *  though - where two adjacent points truncate the same way, taking the nearer
-       *  one is a guess, and it is wrong often enough to matter. */
-      private function snapRolls() : void
+      private function refineRolls() : void
       {
          var i:int = 0;
          var containers:int = 0;
-         var steps:int = 0;
-         var near:int = 0;
-         var fits:int = 0;
-         var pick:int = 0;
-         var s:int = 0;
+         var count:int = total(boosts) + columns.length;
+         var room:Array = [];
+         var head:Number = 0;
+         var want:Number = 0;
+         var share:Number = 0;
+         var lowRank:Number = 0;
+         var highRank:Number = 0;
+         prepare(_socket);
+         lowRank = Math.round(prLow * count + base);
+         highRank = Math.round((prLow + prSpan) * count + base);
          while(i < columns.length)
          {
             containers = int(boosts[i]) + 1;
-            steps = STEPS * containers;
-            near = Math.round(Number(rolls[i]) * steps);
-            near = near < 0 ? 0 : (near > steps ? steps : near);
-            fits = 0;
-            pick = -1;
-            s = near - 1;
-            while(s <= near + 1)
-            {
-               if(s >= 0 && s <= steps && agrees(i,containers,s / steps))
-               {
-                  fits++;
-                  pick = s;
-               }
-               s++;
-            }
-            if(fits == 1 && pick == near)
-            {
-               rolls[i] = near / steps;
-            }
+            room.push(Math.min(1,Number(rolls[i])
+               + 2 * Number(giveNum[i]) / (Number(wide[i]) * containers)) - Number(rolls[i]));
+            head += Number(room[i]) * containers;
+            want -= Number(rolls[i]) * containers;
+            i++;
+         }
+         if(highRank <= lowRank || head <= 0)
+         {
+            return;
+         }
+         want += (rank - lowRank) / (highRank - lowRank) * count;
+         share = want / head;
+         share = share < 0 ? 0 : (share > 1 ? 1 : share);
+         i = 0;
+         while(i < columns.length)
+         {
+            rolls[i] = Number(rolls[i]) + share * Number(room[i]);
             i++;
          }
       }
 
-      private function agrees(i:int, containers:int, roll:Number) : Boolean
-      {
-         var band:Array = BANDS[_tier][_socket][int(columns[i])] as Array;
-         var span:Number = Number(band[2]) - Number(band[1]);
-         var value:Number = (Number(band[1]) * containers + lift(_level) + roll * span * containers) * Number(band[0]);
-         var unit:Number = step(int(places[i]));
-         return Math.abs(Math.floor(value / unit + 1e-9) * unit - Number(printed[i])) < unit * 0.5;
-      }
-
-      /** Where the rank sits between the least and the most a gem of this tier,
-       *  socket, level and container count can reach is the weighted quality
-       *  exactly. -1 when the rank falls outside that band, which means the layout
-       *  is wrong and the stats are the better answer.
-       *
-       *  The level gain accrues once per stat the gem actually has, not three
-       *  times - the two only look the same on a gem with all three. */
       private function ranked() : Number
       {
          var band:Array = PR_BANDS[_tier][_socket] as Array;

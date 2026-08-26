@@ -9,12 +9,6 @@ package
    import flash.text.TextFieldAutoSize;
    import ui.*;
 
-   /** Every control in the shared lib, laid out to be looked at rather than asserted
-    *  against. Gallery is the harness; this is the picture.
-    *
-    *  Live, not a mockup: the dropdowns open, the sliders drag, the pickers pick. What
-    *  is on screen is the same code the screens compile against, so a shot of this
-    *  cannot show something the mods do not have. */
    public class Demo extends Sprite
    {
 
@@ -86,8 +80,6 @@ package
          this.paint();
       }
 
-      /** Set to something other than every default, because a row of untouched
-       *  controls shows what they look like and not what they do. */
       private function build() : void
       {
          var plate:Plate = null;

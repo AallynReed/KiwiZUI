@@ -1,26 +1,5 @@
 package
 {
-   /** Criteox's Mod Setting Manager got there first, and mods already declare themselves
-    *  to likedworlds.swf in its format. Reading it costs one parser and means every mod
-    *  already wired for that hub appears in this one with nothing asked of its author.
-    *
-    *      {'modname':'X','file':'y.swf','settings':{'k':{'type':'checkbox','title':'T',
-    *       'description':'D','value':'true'}}}
-    *
-    *  Quoted keys, quoted scalars, nested objects, and no escaping anywhere - a quote
-    *  inside a label breaks the format at the writing end, so nothing here tries to
-    *  recover one. What it does do is refuse rather than throw: a malformed declaration
-    *  from someone else's mod must not take this screen down with it.
-    *
-    *  Its value dialect is its own - a flag is 'true' and 'false' where ours is 1 and 0 -
-    *  so each option carries how to write it back. A hub that handed a legacy mod our
-    *  literal would silently turn every one of its flags off.
-    *
-    *  What comes back carries every field Hub.ours and Hub.shaped set, down to the ones
-    *  a legacy declaration has nothing to say about. The hub reads a record without
-    *  asking which parser built it, and Iggy throws on a property that is missing rather
-    *  than handing back undefined the way the standalone player does - so a field left
-    *  out here is not an empty value in the panel, it is the panel. */
    public class Legacy
    {
 
@@ -54,10 +33,6 @@ package
                  "group":band.length == 0 ? "" : band.charAt(0).toUpperCase() + band.substring(1)};
       }
 
-      /** The order the author wrote the settings in, which is the order they are meant
-       *  to be read in. A for..in over an object hands them back in whatever order the
-       *  runtime feels like, so the keys are put back into source order by where each
-       *  one appears in the text it was parsed from. */
       private static function ordered(settings:Object, text:String) : Array
       {
          var key:String = null;
@@ -118,7 +93,6 @@ package
          options.push(option);
       }
 
-      /** A dropdown's choices are its own labels, so each one stands for itself. */
       private static function pairs(raw:String) : Array
       {
          var out:Array = [];

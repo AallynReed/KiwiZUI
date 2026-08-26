@@ -7,16 +7,6 @@ package ui
    import flash.text.TextFieldAutoSize;
    import flash.ui.Keyboard;
 
-   /** One choice out of a list. Closed it is a box with the current choice in it;
-    *  open it is that list, lifted to the screen root by Layer so it draws over the
-    *  panel it came from instead of under the next row down.
-    *
-    *  The list is one sprite with a band under the pointer rather than a row of
-    *  sprites with a listener each: which row the pointer is over is a division, and
-    *  a menu that is thrown away on close cannot leak the listeners it never had.
-    *
-    *  Multi is this class with the click toggling instead of choosing, so anything
-    *  changed here has to keep working for both. */
    public class Combo extends Option
    {
 
@@ -36,8 +26,6 @@ package ui
 
       public var labels:Array;
 
-      /** Multi ticks every row; a single choice marks one and needs no column of
-       *  empty boxes to say the others are not it. */
       public var boxes:Boolean = false;
 
       private var face:TextField;
@@ -80,8 +68,6 @@ package ui
          this.held = this.index;
       }
 
-      /** Up and down walk the list whether it is open or shut, so a choice can be
-       *  changed without the menu ever being drawn. */
       override public function stroke(code:uint, scale:Number) : Boolean
       {
          var by:int = code == Keyboard.UP ? -1 : code == Keyboard.DOWN ? 1 : 0;
@@ -139,8 +125,6 @@ package ui
          this.face.textColor = renderer.VALUE;
       }
 
-      /** Set in from the box's inner corner rather than from its middle, so the space
-       *  to the right of the arrow is the space above and below it. */
       private function caret(right:int, top:int, color:uint) : void
       {
          var pad:int = (BOX - 2 - ARROW_H) / 2;
@@ -177,8 +161,6 @@ package ui
          this.paint();
       }
 
-      /** Built on every open rather than kept: the palette can have moved since the
-       *  last one, and a menu that is discarded on close cannot hold a stale colour. */
       private function build() : void
       {
          var field:TextField = null;
@@ -243,8 +225,6 @@ package ui
          this.rail(deep);
       }
 
-      /** Only when there is more list than page. Drawn rather than scrollable by
-       *  hand: the wheel is what moves it, this only says how far along it is. */
       private function rail(deep:int) : void
       {
          var span:int = deep - 2;

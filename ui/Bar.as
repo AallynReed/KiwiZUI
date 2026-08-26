@@ -5,10 +5,6 @@ package ui
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
 
-   /** A track with a filled run and a reading beside it. Two things report progress
-    *  here and they report it differently: mastery and PvP give a fraction of the way
-    *  along, the gem track gives a pair of counts, so the fill is one function and the
-    *  caller picks which reading goes with it. */
    public class Bar extends Sprite
    {
 
@@ -22,9 +18,6 @@ package ui
 
       public var valueText:TextField;
 
-      /** The track, in a child rather than in this sprite's own graphics: Iggy measures
-       *  a sprite by its children and ignores its graphics, and a bar reporting nothing
-       *  yet has an empty run and no text worth measuring either. */
       private var track:Shape = new Shape();
 
       private var run:Shape = new Shape();
@@ -41,8 +34,6 @@ package ui
          this.paint();
       }
 
-      /** The track only. The run over it belongs to whatever last reported progress,
-       *  so it is left alone rather than cleared back to nothing by a repaint. */
       public function paint() : void
       {
          this.track.graphics.clear();
@@ -65,8 +56,6 @@ package ui
          this.fillRun(fraction,renderer.blend(renderer.YELLOW,renderer.VALUE,0.4),renderer.YELLOW);
       }
 
-      /** The far edge is capped with a hairline so a full track still reads as a track
-       *  rather than a solid block. */
       private function fillRun(fraction:Number, top:uint, bottom:uint) : void
       {
          var span:int = this.w * (isNaN(fraction) || fraction < 0 ? 0 : (fraction > 1 ? 1 : fraction));

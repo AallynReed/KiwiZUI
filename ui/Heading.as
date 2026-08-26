@@ -2,11 +2,6 @@ package ui
 {
    import flash.text.TextFieldAutoSize;
 
-   /** A section title in the settings panel.
-    *
-    *  Not a setting: an empty key keeps it out of sync(), out of the config file and out
-    *  of every write. It is a word and a rule under it, so a long list of options reads
-    *  as a few short ones instead of one long one. */
    public class Heading extends Option
    {
 

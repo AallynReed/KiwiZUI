@@ -4,17 +4,6 @@ package ui
    import flash.display.BitmapData;
    import flash.geom.Rectangle;
 
-   /** A bitmap that knows which game texture it is meant to be showing.
-    *
-    *  A path the game does not have throws, and outside Iggy nothing binds at all, so
-    *  the bind is wrapped and reports whether art actually arrived - which is what lets
-    *  a caller put a word back rather than leave a button carrying a bare number.
-    *
-    *  The texture and the size are fields rather than arguments to the call that binds
-    *  them, because bind() is the part with the try in it: a function with parameters
-    *  and a try has those parameters hoisted into locals by the compiler, and the
-    *  decompile then shows an alias the source never had - which costs the build its
-    *  fixed point over its own decompile for nothing. */
    public class Icon extends Bitmap
    {
 
@@ -22,12 +11,17 @@ package ui
 
       public var box:int = 16;
 
-      /** What bind() is painting. Normally this icon itself; paint() points it at
-       *  someone else's bitmap. A field rather than an argument because the call that
-       *  reads it is the one with the try in it, and a parameter used across a try is
-       *  hoisted into a local by the compiler - which shows up in the decompile as an
-       *  alias the source never had. */
       private var canvas:Bitmap;
+
+      private static const TRIES:int = 10;
+
+      private var asked:String = null;
+
+      private var sized:int = -1;
+
+      private var got:Boolean = false;
+
+      private var tries:int = 0;
 
       public function Icon(box:int = 16)
       {
@@ -38,12 +32,26 @@ package ui
 
       public function show(texture:String, box:int) : Boolean
       {
-         this.texture = texture == null ? "" : texture;
+         var want:String = texture == null ? "" : texture;
+         var cap:int = want.length == 0 ? 1 : TRIES;
+         if(want != this.asked || box != this.sized)
+         {
+            this.asked = want;
+            this.sized = box;
+            this.tries = 0;
+            this.got = false;
+         }
+         if(this.got || this.tries >= cap)
+         {
+            return this.got;
+         }
+         this.tries++;
+         this.texture = want;
          this.box = box;
-         return this.bind();
+         this.got = this.bind();
+         return this.got;
       }
 
-      /** The same bind for a caller that is holding a plain Bitmap. */
       public static function paint(image:Bitmap, texture:String, box:int) : Boolean
       {
          var mask:Icon = new Icon(box);
@@ -52,10 +60,6 @@ package ui
          return mask.dress();
       }
 
-      /** The sequence is ObjectPreview's, because it is the one Iggy accepts: clear the
-       *  bitmap, reset the scale, bind, and only then resize - the size comes from the
-       *  file and not from the call's arguments. Measured before the resize, since after
-       *  it every bitmap is the size that was asked for whether or not anything came. */
       public function bind() : Boolean
       {
          this.canvas = this;
@@ -75,8 +79,6 @@ package ui
             bounds = this.canvas.getBounds(this.canvas);
             if(bounds.width > 1 && bounds.height > 1)
             {
-               /* Fitted into the square rather than stretched to it: the art is the
-                  game's and nothing here knows it is square. */
                scale = this.box / Math.max(bounds.width,bounds.height);
                this.canvas.width = bounds.width * scale;
                this.canvas.height = bounds.height * scale;

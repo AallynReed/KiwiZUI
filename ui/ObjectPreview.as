@@ -79,9 +79,6 @@ package ui
          }
       }
       
-      /** True only once a texture has actually rendered into the bitmap. A slot is
-       *  handed a target name whether or not anything is in it, so this is the only
-       *  honest answer to "is something shown here". */
       public function get loaded() : Boolean
       {
          return this._loaded;
@@ -193,10 +190,6 @@ package ui
                this.loadedCallback(this);
             }
          }
-         /* Iggy throws this when the name is not a texture it has finished with, and
-            it takes down whatever called us if it gets out. The screen has nothing to
-            do about it either way: the engine calls objectPreviewReady again when the
-            target is actually ready. */
          catch(e:ArgumentError)
          {
          }
@@ -218,4 +211,3 @@ package ui
       }
    }
 }
-

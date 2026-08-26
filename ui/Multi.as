@@ -1,12 +1,5 @@
 package ui
 {
-   /** Any number of choices out of a list, as the same dropdown with a tick beside
-    *  every row. A click toggles one and leaves the list open, because picking three
-    *  things should not be three trips through the menu - and each toggle is still
-    *  exactly one config write, which is the rule a control has to keep.
-    *
-    *  The literal is the chosen values joined by commas, so a config file states the
-    *  set in the words the code already uses for it and stays editable by hand. */
    public class Multi extends Combo
    {
 
@@ -62,9 +55,6 @@ package ui
          return Boolean(this.chosen[i]);
       }
 
-      /** The chosen labels, written out. A count says how many were picked and never
-       *  which, so the closed box names them and the field it goes in cuts the line
-       *  off where it runs out of room. */
       override public function get summary() : String
       {
          var out:Array = [];
@@ -103,14 +93,11 @@ package ui
          return n;
       }
 
-      /** A set has no next item, so there is nothing for the arrows to walk. */
       override public function stroke(code:uint, scale:Number) : Boolean
       {
          return false;
       }
 
-      /** Left open on purpose: the menu is where a set is assembled, and closing it
-       *  after every tick would make choosing three things three round trips. */
       override public function pick(i:int) : void
       {
          this.chosen[i] = !this.chosen[i];

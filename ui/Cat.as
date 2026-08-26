@@ -4,17 +4,6 @@ package ui
    import flash.events.MouseEvent;
    import flash.text.TextFieldAutoSize;
 
-   /** A category in a settings list: a name, a rule, and a chevron that folds the rows
-    *  under it away.
-    *
-    *  A mod is one entry in the hub however many screens it has, so its options arrive
-    *  in more than one batch and each batch wants saying apart from the next. Open to
-    *  begin with, because a setting nobody can see is a setting nobody will find, and
-    *  folding is for getting a long mod out of the way rather than for hiding it.
-    *
-    *  Not a setting: an empty key keeps it out of every value, every write and every
-    *  sync, exactly as Heading is kept out of them. It reports SELECT rather than
-    *  CHANGE for the same reason - what changed is the list, not a value. */
    public class Cat extends Option
    {
 
@@ -60,8 +49,6 @@ package ui
          renderer.fill(this.box,0,this.tall - RULE,this.w,1,renderer.BORDER);
       }
 
-      /** Down when the rows below are showing, right when they are folded away - the
-       *  direction the eye reads as "there is more that way". */
       private function chevron(color:uint) : void
       {
          var mid:int = (this.tall - RULE * 2) / 2;

@@ -2,28 +2,6 @@ package ui
 {
    import flash.display.Shape;
 
-   /** The tab marks, drawn rather than fetched.
-    *
-    *  Vanilla's own tabs are icons and the art is in the SWF - five shapes, one per mode,
-    *  each a complete tab face with the plate baked into the same shape as the glyph. It
-    *  cannot be lifted out of them without rewriting the shape records, it would arrive
-    *  wearing vanilla's plate rather than ours, and there is nothing in it for the gems
-    *  tab, which is ours and not the game's. So these are drawn.
-    *
-    *  Drawn, and not embedded or fetched: Iggy renders the geometry a SWF carries and
-    *  very little else a mod can bring - see ART.md, where four other routes were put in
-    *  front of it and all four came back blank. A path is a path in any client.
-    *
-    *  They say what vanilla's say, because that is what a player already reads: a sword
-    *  for the adventure bag, a block for the build bag, a leaf for crafting, a crystal
-    *  for Geode, a badge for modules, a bust for the character sheet, a winged shield for
-    *  mastery and crossed swords for PvP. The gem is ours.
-    *
-    *  The character sheet's own tabs are the same story one screen along: four 40x54
-    *  bitmaps, each the whole tab face - gold frame, coloured background and the icon on
-    *  top of it, in one character. Nothing in there can be grafted but the frame with it,
-    *  and keying the background out means re-encoding a bitmap off a gradient. So these,
-    *  which take the palette and are the same drawing at any size. */
    public class Glyph
    {
 
@@ -50,8 +28,6 @@ package ui
          super();
       }
 
-      /** One mark, drawn into the box the button reserved for it. Everything below is in
-       *  twentieths of that box, so a mark is the same drawing at any size. */
       public static function draw(face:Shape, kind:int, box:Number, color:uint) : void
       {
          var u:Number = box / 20;
@@ -100,8 +76,6 @@ package ui
          face.graphics.endFill();
       }
 
-      /** A shape taken back out of a mark, in the panel's own colour rather than by
-       *  erasing: one Shape holds the whole glyph and Flash has no hole to punch. */
       private static function cut(face:Shape, u:Number, points:Array) : void
       {
          var i:int = 2;
@@ -123,7 +97,6 @@ package ui
          face.graphics.endFill();
       }
 
-      /** Point up, because that is how vanilla's sits and how a sword is drawn. */
       private static function sword(face:Shape, u:Number, color:uint) : void
       {
          poly(face,u,color,1,[10,1, 12.2,4.5, 12.2,12, 7.8,12, 7.8,4.5]);
@@ -134,8 +107,6 @@ package ui
          face.graphics.endFill();
       }
 
-      /** A cube, which is what a build bag is full of. Three faces at three weights of
-       *  the one colour, so it reads as a solid without a second colour to configure. */
       private static function block(face:Shape, u:Number, color:uint) : void
       {
          poly(face,u,color,1,[10,1.5, 17.5,5.8, 10,10.1, 2.5,5.8]);
@@ -156,7 +127,6 @@ package ui
          face.graphics.lineStyle();
       }
 
-      /** The cut Geode's own tab shows: a long hexagon with a facet down it. */
       private static function crystal(face:Shape, u:Number, color:uint) : void
       {
          poly(face,u,color,1,[10,1.2, 16,5.6, 16,14.4, 10,18.8, 4,14.4, 4,5.6]);
@@ -169,8 +139,6 @@ package ui
          face.graphics.lineStyle();
       }
 
-      /** A module is a fitting rather than a thing, so it is drawn as one: a plate with
-       *  a socket in the middle of it. */
       private static function badge(face:Shape, u:Number, color:uint) : void
       {
          face.graphics.lineStyle(1.9 * u,color & 0xFFFFFF,renderer.solidity(color));
@@ -181,8 +149,6 @@ package ui
          face.graphics.endFill();
       }
 
-      /** Head and shoulders, which is what vanilla's character tab carries. Square,
-       *  because everything in this game is. */
       private static function bust(face:Shape, u:Number, color:uint) : void
       {
          bar(face,u,color,1,6.4,2.4,7.2,7.6);
@@ -195,9 +161,6 @@ package ui
          face.graphics.lineStyle();
       }
 
-      /** Mastery is a rank, so it is drawn as one: the shield vanilla's tab carries with
-       *  a rank's chevrons cut out of it. The wings on vanilla's badge are three shapes
-       *  fighting over the same twenty pixels and come out as flaps at this size. */
       private static function shield(face:Shape, u:Number, color:uint) : void
       {
          poly(face,u,color,1,[10,2, 16,4.6, 16,11.4, 10,18.2, 4,11.4, 4,4.6]);
@@ -205,9 +168,6 @@ package ui
          cut(face,u,[10,10, 13.2,12, 13.2,13.6, 10,11.6, 6.8,13.6, 6.8,12]);
       }
 
-      /** Two swords crossed, which is the mark every game uses for this and the one
-       *  vanilla's PvP tab carries. Longer than the single sword above and drawn with a
-       *  grip: a blade that stops at its guard reads as a chevron once it is leaning. */
       private static function crossed(face:Shape, u:Number, color:uint) : void
       {
          blade(face,u,color,-40);
@@ -222,8 +182,6 @@ package ui
          poly(face,u,color,0.72,turn(deg,[8.2,18.4, 11.8,18.4, 11.8,19.6, 8.2,19.6]));
       }
 
-      /** The same points about the middle of the box, so a sword is written down once
-       *  and leant either way rather than twice with the second set worked out by hand. */
       private static function turn(deg:Number, points:Array) : Array
       {
          var a:Number = deg * Math.PI / 180;
@@ -243,7 +201,6 @@ package ui
          return out;
       }
 
-      /** A brilliant cut: a table, a girdle and a point. */
       private static function gem(face:Shape, u:Number, color:uint) : void
       {
          poly(face,u,color,1,[6.6,2.6, 13.4,2.6, 17.6,7.6, 10,18.4, 2.4,7.6]);

@@ -10,32 +10,11 @@ package ui
    import flash.ui.Keyboard;
    import flash.text.TextFormat;
 
-   /** A typed-into box with a hint behind it and a cross to empty it. The hint is a
-    *  second field rather than placeholder text in the first, so what the caller reads
-    *  back is always what was typed and never the prompt.
-    *
-    *  Typing and committing are two different events on purpose. A box that filters a
-    *  list wants every keystroke, and a box that sets a config key must not have one:
-    *  a write per keystroke is the failure that kills the screen. So typing dispatches
-    *  TYPING, and CHANGE - the event the settings panel writes on - only comes from
-    *  the tick beside the field or from leaving it.
-    *
-    *  A box with no config key has nothing to write, so for that one every keystroke
-    *  is settled and CHANGE follows TYPING. That is what makes a filter box a filter
-    *  box without the caller having to know which event it is meant to want.
-    *
-    *  Iggy has to be told a text field took focus or the keys keep going to the game.
-    *  That is the screen's job, not this widget's: the root reports FOCUS_IN and
-    *  FOCUS_OUT for whatever field they came from, and this one bubbles like any
-    *  other. A screen with no such handler has a box that cannot be typed into. */
    public class Input extends Option
    {
 
       public static const TYPING:String = "typing";
 
-      /** The box this draws inside its row. Public because a control placed beside a
-       *  field has to match the field and not the row it sits in - matched to the row,
-       *  a button stands taller than the box it is meant to be part of. */
       public static const BOX:int = 24;
 
       private static const SET:int = 26;
@@ -52,9 +31,6 @@ package ui
 
       private var hot:Boolean = false;
 
-      /** Set when the container resolves presses by coordinate. The box then ignores its
-       *  own click and roll events rather than being taken off the mouse, which would
-       *  stop the field taking the caret at all. */
       public var driven:Boolean = false;
 
       public function Input(key:String, text:String, w:int, prompt:String = "", size:int = 12)
@@ -84,8 +60,6 @@ package ui
          addEventListener(MouseEvent.CLICK,this.onClick);
       }
 
-      /** Drawn rather than typed: a tick is a glyph the shipped font may or may not
-       *  carry, and a missing one is a blank button with nothing to say why. */
       private function tick(plate:Plate) : void
       {
          var mid:int = BOX >> 1;
@@ -138,8 +112,13 @@ package ui
          this.report();
       }
 
-      /** The box takes the control lane when the row has a name and the whole width
-       *  when it has not, which is the difference between a setting and a search. */
+      public function compose(start:int, length:int, body:String) : void
+      {
+         this.field.replaceText(start,start + length,body);
+         this.paint();
+         this.report();
+      }
+
       private function get boxAt() : int
       {
          return this.caption == null ? 0 : this.lane;
@@ -187,9 +166,6 @@ package ui
          renderer.centre(f,mid,BOX);
       }
 
-      /** Drawn into this sprite rather than kept as a child: it is two strokes and a
-       *  hit box, and the click is caught by position instead of by a listener on one
-       *  more display object. */
       private function cross(x:int, y:int, on:Boolean) : void
       {
          if(!on)
@@ -204,14 +180,6 @@ package ui
          this.box.graphics.lineStyle();
       }
 
-      /** Which of the two things a press on this box means, from where it landed: the
-       *  cross clears it, anywhere else puts the caret in it.
-       *
-       *  The container asks, because Iggy decides which sprite a press belongs to from
-       *  what it measured a sprite's children to be - and the children of an empty
-       *  search box measure nothing at all, so the middle of it was never its own.
-       *
-       *  The point is in the container's coordinates, the same as `Hit` takes. */
       public function press(at:Point) : Boolean
       {
          var edge:Number = this.x + this.boxAt + this.boxWide;
@@ -229,7 +197,6 @@ package ui
          return true;
       }
 
-      /** The caret, put where a press cannot be trusted to put it. */
       public function focus() : void
       {
          if(stage != null)
@@ -300,12 +267,6 @@ package ui
          this.commit();
       }
 
-      /** Enter settles the box, the same as its button does.
-       *
-       *  Registered rather than relied on: Iggy feeds a field through
-       *  `UIComponent.textCompositionReplace` and not through Flash key events, so whether
-       *  this ever fires in game is the engine's business. A listener nothing calls costs
-       *  nothing, and the button is the path that is known to work. */
       private function onKey(e:KeyboardEvent) : void
       {
          if(e.keyCode == Keyboard.ENTER)

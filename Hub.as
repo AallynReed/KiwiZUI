@@ -5,33 +5,6 @@ package
    import flash.external.ExternalInterface;
    import flash.utils.getTimer;
 
-   /** The declaring half of the settings hub: what a mod says about itself so that one
-    *  screen can offer every mod's options in one place.
-    *
-    *  It works because OnSaveConfig is addressed by SWF and not by caller. A write
-    *  naming a section lands in the .cfg of whichever mod packs that SWF, so writing
-    *  to ADDRESS puts a value in the hub's file, where the hub reads it back through
-    *  its own loadModConfiguration. That is the only channel between two mods there
-    *  is - nothing can ask for a section that is not its own.
-    *
-    *  One key per mod, never one per setting. Every option a mod has goes in a single
-    *  value, so adding a settings page costs one config write rather than twenty:
-    *  OnSaveConfig is a record and a screen that traces through it dies on load.
-    *
-    *      1|<swf>|<Mod Title>|key~type~label~value~params|key~type~...
-    *
-    *  Values are the same literals the config file carries, so a value set in the hub
-    *  and a value set by hand in the file cannot come to mean different things, and
-    *  the hub can hand one straight back with no conversion in between.
-    *
-    *  Publishing waits a beat for the same reason seeding does: ExternalInterface.call
-    *  goes nowhere until Iggy has wired the bridge, silently, and a declaration made
-    *  from a constructor is simply lost. Paced on ENTER_FRAME rather than a Timer,
-    *  because callbacks can arrive before the first frame tick.
-    *
-    *  It waits again afterwards. A setting the player changes is one write; recording
-    *  it here is a second, and Trove rewrites the whole file for either - so the record
-    *  trails the changing rather than following each step of it. */
    public class Hub
    {
 
@@ -39,8 +12,6 @@ package
 
       public static const VERSION:String = "3";
 
-      /** Prefix on the key a declaration is written under, so the hub can tell one from
-       *  its own settings sharing the section, and so a stale mod can be recognised. */
       public static const MARK:String = "zm_";
 
       public static const CHECK:String = "check";
@@ -57,19 +28,14 @@ package
 
       public static const INPUT:String = "input";
 
+      public static const LIST:String = "list";
+
       public static const STEPPER:String = "stepper";
 
       public static const HEADING:String = "heading";
 
       private static const SETTLE:int = 2000;
 
-      /** How long the record waits after the last change before it is written.
-       *
-       *  Trove rewrites the whole .cfg for one key, and the hub's file is every mod's
-       *  declarations - so the write that records a change costs more than the write
-       *  that makes it, and doing both on the click is what makes a setting take the
-       *  game away for a moment. One is all the player asked for; the record follows
-       *  once the changing has stopped. */
       private static const QUIET:int = 1500;
 
       private var section:String;
@@ -90,19 +56,10 @@ package
 
       private var last:String;
 
-      /** A change is waiting to be recorded. */
       private var dirty:Boolean = false;
 
-      /** Until the first declaration has gone out, nothing is written. Config arrives
-       *  one key at a time and a screen that republished on each of them would spend
-       *  the whole of its load writing - the same spam that kills a screen when it is
-       *  aimed at its own section, aimed at someone else's. */
       private var armed:Boolean = false;
 
-      /** group names the screen these settings belong to. A mod with more than one
-       *  screen declares once per screen, and the hub shows one entry for the mod with
-       *  a foldable category per screen - so the name has to be the screen's, in words,
-       *  and not the SWF's filename. Left out, the filename is what is left to use. */
       public function Hub(section:String, title:String, valueOf:Function, group:String = "")
       {
          super();
@@ -112,28 +69,12 @@ package
          this.band = group;
       }
 
-      /** What this mod is and how it is meant to be used, in the author's own words.
-       *  Shown in place of the controls when the reader asks for it, so a mod with
-       *  something to explain has somewhere to explain it that is not a settings row
-       *  and not a page on a website nobody opens.
-       *
-       *  Line breaks survive the config file: a real newline would end the value and
-       *  take the rest of the readme with it, so they travel escaped. */
       public function readme(text:String) : Hub
       {
          this.about = text;
          return this;
       }
 
-      /** One row in the hub, in the order they are added. params is the type's own
-       *  extra: min,max,step,places,zero,suffix for anything numeric, a value=Label
-       *  list for a dropdown, nothing at all for a flag. Neither a zero-word nor a
-       *  suffix may carry a comma, which is the one thing the range list cannot spell.
-       *
-       *  note is what the setting is for and what it wants to be set to, in the mod
-       *  author's own words. A label has to fit a lane and so says what a setting is
-       *  called; this is the room to say what it does, and it is the only place a
-       *  player reading someone else's option can find that out. */
       public function option(key:String, type:String, label:String, params:String = "",
                              note:String = "") : Hub
       {
@@ -141,10 +82,6 @@ package
          return this;
       }
 
-      /** The key a declaration is written under. It carries the SWF as well as the
-       *  mod, because a mod with two screens declares twice and a key naming only the
-       *  mod would have the second statement land on top of the first - one screen's
-       *  settings silently replacing the other's. */
       public function slug() : String
       {
          return flatten(this.title) + "__" + flatten(stem(this.section));
@@ -171,7 +108,6 @@ package
          return at < 0 ? swf : swf.substring(0,at);
       }
 
-      /** Arms the beat that publishes, once, from the screen that owns the settings. */
       public function watch(screen:DisplayObject) : void
       {
          if(this.screen != null)
@@ -183,8 +119,6 @@ package
          this.screen.addEventListener(Event.ENTER_FRAME,this.onFrame);
       }
 
-      /** The beat stays on the screen rather than coming off at the first write: it is
-       *  what carries a change to the file once the player has stopped making them. */
       private function onFrame(e:Event) : void
       {
          if(getTimer() < this.due)
@@ -201,17 +135,9 @@ package
             this.dirty = false;
             this.record();
          }
+         this.screen.removeEventListener(Event.ENTER_FRAME,this.onFrame);
       }
 
-      /** Called whenever a setting changes, so the hub shows what the screen is
-       *  actually running with. It marks rather than writes, and the beat writes QUIET
-       *  after the last change - so a click is one config write, the setting itself,
-       *  and a run of them is still one record at the end of it.
-       *
-       *  The wait is only ever pushed back once the first declaration has gone out.
-       *  Config arrives one key at a time and each arrival publishes, so before that
-       *  it would walk the arming beat forward key by key and declare early - into a
-       *  bridge Iggy has not wired yet, where the call goes nowhere. */
       public function publish() : void
       {
          this.dirty = true;
@@ -219,10 +145,12 @@ package
          {
             this.due = getTimer() + QUIET;
          }
+         if(this.screen != null)
+         {
+            this.screen.addEventListener(Event.ENTER_FRAME,this.onFrame);
+         }
       }
 
-      /** Silent when nothing moved: a record that says what the last one said is a
-       *  config write for no news. */
       private function record() : void
       {
          var line:String = this.declaration();
@@ -234,9 +162,6 @@ package
          ExternalInterface.call("UIComponent.OnSaveConfig",ADDRESS,MARK + this.slug(),line);
       }
 
-      /** A value set in the hub, addressed to the mod that declared it. The same call
-       *  every mod makes for its own settings, aimed at someone else's section - which
-       *  is the whole of what makes one screen able to set another mod's options. */
       public static function write(swf:String, key:String, value:String) : void
       {
          if(!IggyFunctions.inIggy)
@@ -269,8 +194,6 @@ package
          return raw == null ? "" : String(raw);
       }
 
-      /** The separators have to survive a label that contains one. Backslash first, or
-       *  unescaping would turn an escaped backslash back into an escape. */
       public static function esc(text:String) : String
       {
          if(text == null)
@@ -305,14 +228,6 @@ package
          return out;
       }
 
-      /** The reading half. A hub sees every key in its own section, its own settings
-       *  among them, so a declaration has to be recognised rather than assumed: ours
-       *  by its prefix and its version, a legacy one by the shape of its value.
-       *
-       *  Returns {swf, title, options:[{key,type,label,value,params}]}, or null for a
-       *  key that is not a declaration at all. A mod that has been uninstalled leaves
-       *  its key behind - there is nothing to clear it - so the hub is told what the
-       *  declaration says and decides for itself what to do with a stale one. */
       public static function parse(key:String, value:String) : Object
       {
          if(key == null || value == null)
@@ -332,10 +247,6 @@ package
          return null;
       }
 
-      /** Version 1 had no group, so its options start one field earlier. Both are read
-       *  rather than only the current one: a declaration is written by another mod and
-       *  goes stale in this file until that mod next runs, so a hub that understood
-       *  only the newest format would drop every mod that had not been rebuilt. */
       private static function ours(value:String) : Object
       {
          var field:Array = null;
@@ -363,16 +274,11 @@ package
                              ? stem(String(parts[1])) : String(parts[3]))};
       }
 
-      /** A group left unnamed falls back to the SWF it came from, which is a filename
-       *  and reads like one. Title casing it is the least that makes it a word. */
       private static function named(text:String) : String
       {
          return text.length == 0 ? "" : text.charAt(0).toUpperCase() + text.substring(1);
       }
 
-      /** One record shape whichever format it arrived in, so the hub builds a row from
-       *  a declaration without asking where it came from. The type's extra is parsed
-       *  here and never again. */
       private static function shaped(field:Array) : Object
       {
          var range:Array = null;
@@ -381,7 +287,7 @@ package
          var out:Object = {"key":field[0],"type":type,"label":field[2],"value":field[3],
                            "note":field.length > 5 ? field[5] : "","emit":"","choices":[],
                            "min":0,"max":100,"step":1,"places":0,"zero":"","suffix":"",
-                           "len":0};
+                           "len":0,"prompt":""};
          if(type == SLIDER || type == SPIN || type == STEPPER)
          {
             range = params.split(",");
@@ -400,11 +306,13 @@ package
          {
             out.len = int(params);
          }
+         else if(type == LIST)
+         {
+            out.prompt = params;
+         }
          return out;
       }
 
-      /** value=Label, comma separated. A label is free text, so only the first equals
-       *  splits a pair and a choice with no equals stands for itself. */
       private static function choices(params:String) : Array
       {
          var at:int = 0;
@@ -425,8 +333,6 @@ package
          return out;
       }
 
-      /** Splitting on a separator that may have been escaped. String.split cannot do
-       *  it, so the scan is by hand and each field is unescaped once it is whole. */
       public static function cut(text:String, sep:String) : Array
       {
          var out:Array = [];

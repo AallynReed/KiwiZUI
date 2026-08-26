@@ -7,39 +7,23 @@ package
    import flash.filters.BitmapFilterQuality;
    import flash.filters.ColorMatrixFilter;
    import flash.filters.DropShadowFilter;
+   import flash.filters.GlowFilter;
    import flash.geom.Matrix;
+   import flash.utils.Dictionary;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
    import flash.text.TextFormat;
    import flash.text.TextFormatAlign;
    import flash.text.TextLineMetrics;
 
-   /** Every colour the screens draw with, and the primitives they draw. Nothing here
-    *  keeps state beyond the palette, so a screen can repaint from scratch at any
-    *  point without asking what was drawn before. */
    public class renderer
    {
 
-      /** How far one notch of the wheel moves a view, added to whatever the caller
-       *  measures its scroll in.
-       *
-       *  **Iggy's `delta` is not the three lines Flash documents, and its size is not a
-       *  count of anything.** Multiplying by it moved every list here a screenful or more
-       *  at a time. Trove's own `ScrollableView` divides it by its own magnitude and
-       *  keeps only the sign, which is the whole of what the number is good for - so the
-       *  distance is one we choose and the wheel says nothing but which way.
-       *
-       *  The default is a notch as the desktop has always meant it, three lines of text.
-       *  A view whose rows are its unit passes its own row height instead. */
       public static function wheel(e:MouseEvent, by:Number = 48) : Number
       {
          return e.delta > 0 ? -by : by;
       }
 
-      /** The greys carry the default translucency in their top byte rather than a
-       *  separate opacity setting multiplied over every draw. A fixed multiplier meant
-       *  the panel colour's own alpha picker could never reach solid: whatever it was
-       *  set to, the window came out at 94% of it. One control, and the picker is it. */
       public static var PANEL:uint = 0x0F0B0C0E;
 
       public static var PANEL2:uint = 0x0F0B0C0E;
@@ -68,6 +52,8 @@ package
 
       public static var RED:uint = 0xE5484D;
 
+      public static var DANGER:uint = 0xE5484D;
+
       public static var ORANGE:uint = 0xF2870D;
 
       public static var YELLOW:uint = 0xEBC13B;
@@ -86,10 +72,6 @@ package
 
       public static var COSMIC:uint = 0x7FD962;
 
-      /** The Light stat's own colour, and not the accent it used to borrow. They start
-       *  at the same cyan, which is why the borrowing went unnoticed: an accent set to
-       *  anything else took the stat with it, and a stat that changes colour with the
-       *  theme is no longer saying which stat it is. */
       public static var LIGHT:uint = 0x5FD3E8;
 
       public static const BLACK:uint = 0;
@@ -98,22 +80,28 @@ package
 
       public static const SHADOW2:DropShadowFilter = new DropShadowFilter(0,210,0,0,0,0,0,1);
 
-      /** A hard copy of the glyph one pixel under it rather than a haze around it: at
-       *  the sizes these screens draw at a blur thickens the text and reads as being
-       *  slightly out of focus. For a number that has to be read off whatever it is
-       *  drawn over - a stack count on an item icon - and never over a panel.
-       *
-       *  It goes on a field and never on a container. One on a sprite is a different
-       *  call and it has taken a screen down with nothing in any log. */
       public static const SHADE:DropShadowFilter = new DropShadowFilter(1,90,0,0.6,0,0,1,
                                                                         BitmapFilterQuality.LOW);
 
       public static const GHOST:ColorMatrixFilter = new ColorMatrixFilter([0.4,0.4,0.4,0,0,0.4,0.4,0.4,0,0,0.4,0.4,0.4,0,0,0,0,0,1,0]);
 
+      public static const MAXRING:int = 4;
+
+      private static const PUSH:Number = 12;
+
+      public static var MARK:Array = null;
+
+      private static const STAMPED:Dictionary = new Dictionary(true);
+
+      public static var RING:int = 0;
+
+      public static var INK:uint = 0;
+
       private static const FMT:TextFormat = new TextFormat("Open Sans",null,VALUE,false,false,false,null,null);
 
-      /** The two pixels Flash reserves above and below the lines of every field. */
       private static const GUTTER:int = 2;
+
+      private static const CAP:Number = 0.6;
 
       private static const LINES:Object = {};
 
@@ -131,9 +119,6 @@ package
 
       private static const CHAOS_STOP:Array = [0,42,84,126,168,210,255];
 
-      /** The hue wheel the way hsv() reads it: red at nothing, round through the
-       *  spectrum, red again at one. Drawn the other way up, the strip and the colour a
-       *  click on it produced were mirror images of each other. */
       private static const HUES:Array = [0xFF0000,0xFFFF00,0x00FF00,0x00FFFF,0x0000FF,0xFF00FF,0xFF0000];
 
       private static const HUE_ALPHA:Array = [1,1,1,1,1,1,1];
@@ -142,32 +127,14 @@ package
 
       private static const QUARTER:Number = Math.PI * 0.5;
 
-      /** Config key to palette field, one key per colour and never two.
-       *
-       *  There used to be aliases here - accent and cyan naming one colour, yellow and
-       *  gold another - and each alias was seeded into the file as its own key. Trove
-       *  relays a section one key per call, so on every load the second of a pair
-       *  arrived after the first and overwrote it: a chosen accent was saved correctly,
-       *  then undone by the untouched `cyan` line sitting further down the same file.
-       *  It looked for all the world like the write had failed.
-       *
-       *  A colour with two names is a colour that can disagree with itself. One name. */
       private static const FIELD:Object = {
          "panel":"PANEL", "label":"LABEL", "value":"VALUE",
-         "accent":"CYAN", "red":"RED", "orange":"ORANGE",
+         "accent":"CYAN", "red":"RED", "danger":"DANGER", "orange":"ORANGE",
          "yellow":"YELLOW", "green":"GREEN", "purple":"PURPLE",
          "water":"WATER", "air":"AIR", "fire":"FIRE", "cosmic":"COSMIC",
          "statlight":"LIGHT"
       };
 
-      /** The greys are one colour at five lightnesses, not eleven keys that can
-       *  disagree with each other. The steps are the ones the stock palette already
-       *  stood at - measured off it rather than invented - so a default config draws
-       *  exactly what it always drew, and a panel colour set after that carries the
-       *  whole screen with it instead of leaving a header behind at the old shade.
-       *
-       *  Only the greys are in here. The accent, the two text colours and the rarity
-       *  colours each mean something of their own and stay settable. */
       private static const STEPS:Object = {
          "PANEL2":0, "RAISED6":0, "RAISED":0.018,
          "RAISED2":0.028, "RAISED3":0.028, "RAISED4":0.028,
@@ -175,30 +142,15 @@ package
          "ROW":0.229, "BORDER":0.229
       };
 
-      /** What a config file carries. The greys that STEPS derives are deliberately not
-       *  in here: a key nothing reads is a key a player can set and watch do nothing. */
-      public static const KEYS:Array = ["panel","label","value","accent","red","orange",
+      public static const KEYS:Array = ["panel","label","value","accent","red","danger","orange",
                                         "yellow","green","purple","water","air","fire","cosmic",
-                                        "statlight"];
+                                        "statlight","outline","outlinecolor"];
 
       public function renderer()
       {
          super();
       }
 
-      /** Assignment is spelled out rather than looked up: a colour is a plain static so
-       *  every draw reads it straight, and Iggy is not asked to write a class property
-       *  by name. FIELD folds the aliases in, so this switch has one case per colour
-       *  and not one per key. */
-      /** A palette colour carries its own transparency in the top byte, and the byte
-       *  counts *down* from opaque: zero is solid. That way every plain RGB literal
-       *  already written into these screens - 0xFFFFFF for a crosshair, 0 for black -
-       *  is opaque by construction, and no drawing call anywhere had to be rewritten
-       *  to honour a translucent palette. The primitives mask the byte off before it
-       *  reaches the graphics call and fold it into the alpha instead. */
-      /** How opaque a palette colour is. The top byte carries the transparency a player
-       *  set, so anything drawing raw geometry in a palette colour has to apply it the
-       *  way fill() and border() already do - public for those callers. */
       public static function solidity(color:uint) : Number
       {
          return 1 - (color >>> 24) / 255;
@@ -207,6 +159,18 @@ package
       public static function apply(key:String, raw:String) : Boolean
       {
          var name:String = key.toLowerCase();
+         if(name == "outline")
+         {
+            RING = Config.number(raw,0,MAXRING,0);
+            remark();
+            return true;
+         }
+         if(name == "outlinecolor")
+         {
+            INK = Config.color(raw,0);
+            remark();
+            return true;
+         }
          var field:String = FIELD[name];
          if(field == null)
          {
@@ -221,6 +185,7 @@ package
             case "VALUE":   VALUE = c; derive(); break;
             case "CYAN":    CYAN = c;    break;
             case "RED":     RED = c;     break;
+            case "DANGER":  DANGER = c;  break;
             case "ORANGE":  ORANGE = c;  break;
             case "YELLOW":  YELLOW = c;  break;
             case "GREEN":   GREEN = c;   break;
@@ -235,9 +200,6 @@ package
          return true;
       }
 
-      /** The ramp, off whatever PANEL now is. The transparency travels with it, because
-       *  a translucent panel that left an opaque header and border behind is not a
-       *  translucent window - it is a window with two holes in it. */
       private static function derive() : void
       {
          var name:String = null;
@@ -264,9 +226,6 @@ package
          }
       }
 
-      /** Not valueOf: that is Object's own coercion hook, and a static of that name
-       *  on a class is called by the player with no argument whenever the class object
-       *  is coerced - a warning per coercion and a hook that cannot do its job. */
       public static function colorOf(key:String) : uint
       {
          switch(FIELD[key.toLowerCase()])
@@ -285,6 +244,7 @@ package
             case "LABEL":   return LABEL;
             case "CYAN":    return CYAN;
             case "RED":     return RED;
+            case "DANGER":  return DANGER;
             case "ORANGE":  return ORANGE;
             case "YELLOW":  return YELLOW;
             case "GREEN":   return GREEN;
@@ -305,20 +265,43 @@ package
 
       public static function defaultOf(key:String) : String
       {
+         var name:String = key.toLowerCase();
+         if(name == "outline")
+         {
+            return String(RING);
+         }
+         if(name == "outlinecolor")
+         {
+            return Config.hex(INK);
+         }
          return Config.hexa(colorOf(key),alphaOf(key));
       }
 
-      /** Binds a game texture onto a bitmap and says whether one actually arrived, for
-       *  a caller holding a plain Bitmap rather than a ui.Icon. The sequence itself is
-       *  Icon's, so there is one of it. */
+      public static function stamp(field:TextField, own:Array = null) : TextField
+      {
+         var base:Array = own == null ? [SHADOW] : own;
+         STAMPED[field] = base;
+         field.filters = MARK == null ? base : MARK;
+         return field;
+      }
+
+      private static function remark() : void
+      {
+         var field:Object = null;
+         MARK = RING <= 0
+              ? null
+              : [new GlowFilter(INK,1,RING * 2,RING * 2,PUSH,BitmapFilterQuality.MEDIUM)];
+         for(field in STAMPED)
+         {
+            TextField(field).filters = MARK == null ? STAMPED[field] : MARK;
+         }
+      }
+
       public static function bindIcon(image:Bitmap, texture:String, size:int) : Boolean
       {
          return Icon.paint(image,texture,size);
       }
 
-      /** A format a caller can put on a field it did not build here - a control's own
-       *  caption, most of the time. A copy rather than the shared one, because the shared
-       *  one is rewritten by the next label built after it. */
       public static function spacedOut(size:int, spacing:Number) : TextFormat
       {
          var out:TextFormat = new TextFormat("Open Sans",size,VALUE);
@@ -334,7 +317,7 @@ package
       {
          var field:TextField = new TextField();
          field.mouseEnabled = false;
-         field.filters = [SHADOW];
+         stamp(field);
          field.defaultTextFormat = shaped(size,align,bold,spacing);
          field.x = x;
          field.y = y;
@@ -342,9 +325,6 @@ package
          return boxed(field,w,h,wrap,align);
       }
 
-      /** Spacing is set on every call and not only when it is asked for: the format is
-       *  one shared object, so a caption that wanted letter spacing would otherwise leave
-       *  it on the next label built after it. */
       private static function shaped(size:int, align:String, bold:Boolean,
                                      spacing:Number = 0) : TextFormat
       {
@@ -355,10 +335,6 @@ package
          return FMT;
       }
 
-      /** A field sized for its line box, not for its font size: height from the size
-       *  alone clips the text away entirely above 14pt, and a field that renders
-       *  nothing looks for all the world like a font ceiling. autoSize goes on last so
-       *  it settles against the width the caller asked for. */
       private static function boxed(field:TextField, w:int, h:int, wrap:Boolean, align:String) : TextField
       {
          if(w != -1)
@@ -374,18 +350,8 @@ package
          return field;
       }
 
-      /** A field that stays exactly where it is put. label() sizes to its content,
-       *  which is what a caption wants and the opposite of what a readout in a fixed
-       *  column wants: an autoSized CENTER field slides sideways as its text changes,
-       *  so a value that grows a digit no longer lines up with the one above it.
-       *  Height is the line box rather than the font size - below that the field
-       *  renders nothing at all. */
       public static function pin(field:TextField, w:int, size:int) : TextField
       {
-         /* autoSize CENTER moves a field sideways to keep its centre where it was, so a
-            field arriving here has already drifted and freezing it at that x puts the
-            text off the control. Callers that place the field themselves overwrite this
-            anyway; the ones that do not need it back at nothing. */
          field.x = 0;
          field.autoSize = TextFieldAutoSize.NONE;
          field.width = w;
@@ -393,20 +359,6 @@ package
          return field;
       }
 
-      /** How tall one line stands at this size, measured once per size and kept. The
-       *  numbers are Flash's own and not the font file's - it rounds both the ascent
-       *  and the descent to whole pixels, so 12pt and 13pt come out the same height -
-       *  and a field with nothing in it reports no height at all, which is the state
-       *  every control paints in before it has anything to say. */
-      /** Bold is part of the measurement, not a detail of it. Trove ships Open Sans as
-       *  five separate faces and the semibold is not the regular at another weight - it
-       *  has its own ascent - so a bold title measured against the regular sits a pixel
-       *  off the plain text beside it, which is exactly how far off it was. */
-      /** The line is the ascent and the descent and nothing else. textHeight is the same
-       *  number in Flash at every size we draw at, and is not in a host that folds the
-       *  font's line gap into it - which makes the box taller than the text in it and
-       *  centres every caption above the control drawn around it. Measured metrics of
-       *  zero are that host having no answer at all, so textHeight stands in. */
       private static function lineOf(size:Number, bold:Boolean = false) : Number
       {
          var key:String = String(size) + (bold ? "b" : "");
@@ -425,13 +377,6 @@ package
          return Number(LINES[key]);
       }
 
-      /** How far under a field's own top edge the first line of text sits on.
-       *
-       *  This is the number that makes two fields at two sizes line up. A field is a
-       *  gutter plus the ascent of whatever is written in it, and the ascent grows with
-       *  the point size - so two boxes centred as boxes put their words on two different
-       *  lines, and a fifteen point title beside a twelve point count reads as one of
-       *  them having slipped. */
       private static function ascentOf(size:Number, bold:Boolean = false) : Number
       {
          var key:String = String(size) + (bold ? "b" : "");
@@ -446,43 +391,39 @@ package
          return Number(ASCENTS[key]);
       }
 
-      /** Puts a field so its text sits on a given line, whatever size that text is.
-       *
-       *  **This is what "aligned" means for text**, and it is the only thing that makes
-       *  two sizes agree. Anything placing two fields that should read as one row asks
-       *  baselineIn() for the line once and puts both of them on it. */
       public static function baseline(field:TextField, y:Number) : void
       {
          var fmt:TextFormat = field.defaultTextFormat;
          field.y = y - ascentOf(Number(fmt.size),fmt.bold == true);
       }
 
-      /** The line text that size wants in a box that tall - the same answer centre()
-       *  arrives at, handed out so a row of different sizes can share one. */
+      public static function markBy(field:TextField, h:Number) : Number
+      {
+         var fmt:TextFormat = field.defaultTextFormat;
+         var size:Number = Number(fmt.size);
+         var bold:Boolean = fmt.bold == true;
+         var body:Number = (ascentOf(size,bold) - GUTTER) * CAP;
+         return field.y + ascentOf(size,bold) - (body + h) / 2;
+      }
+
       public static function baselineIn(size:Number, top:Number, h:Number,
                                         bold:Boolean = false) : Number
       {
          return top + (h - lineOf(size,bold)) / 2 + ascentOf(size,bold);
       }
 
-      /** How tall a box has to be for that many lines at that size, gutters included.
-       *  A pinned field keeps whatever height it was made with, so a wrapping one has to
-       *  be given the room its lines need or it shows the first of them and stops. */
       public static function deep(size:Number, lines:int = 1, bold:Boolean = false) : int
       {
          return int(lineOf(size,bold) * lines + GUTTER * 2);
       }
 
-      /** Puts text in the middle of a box. The field's own height is the wrong thing
-       *  to centre on: pin() gives a field more of it than the lines need so nothing
-       *  is ever clipped, and a control that halves that room puts its words a couple
-       *  of pixels above the box drawn around them - which is why a readout used to
-       *  sit higher than the caption beside it. What is centred is what is written,
-       *  which for a field that wraps is however many lines it came to and for one
-       *  with nothing in it yet is the one line it is going to have.
-       *
-       *  Every control places its text through here, so one rule decides where text
-       *  sits and a box cannot drift away from the words in it. */
+      public static function blockOf(field:TextField) : int
+      {
+         var fmt:TextFormat = field.defaultTextFormat;
+         var one:int = deep(int(fmt.size),1,fmt.bold == true);
+         return Math.max(one,int(field.textHeight + GUTTER * 2));
+      }
+
       public static function centre(field:TextField, top:Number, h:Number) : void
       {
          var fmt:TextFormat = field.defaultTextFormat;
@@ -490,9 +431,6 @@ package
          var bold:Boolean = fmt.bold == true;
          var line:Number = lineOf(size,bold);
          var deep:Number = field.textHeight + GUTTER * 2;
-         /* One line goes on the line, so a caption and a readout beside it agree without
-            either of them being nudged by hand. More than one is centred as a block -
-            there is no single baseline to put a paragraph on. */
          if(deep <= line)
          {
             baseline(field,baselineIn(size,top,h,bold));
@@ -501,21 +439,17 @@ package
          field.y = top + (h - deep) / 2;
       }
 
-      /** The same rule across a box. A field draws its text a gutter in from its own
-       *  left edge, so a caption placed at the padding sits a gutter to the right of
-       *  where it looks like it was put - which on a control only as wide as its word is
-       *  the difference between centred and visibly not. */
+      public static function firstLine(field:TextField, top:Number, h:Number) : void
+      {
+         var fmt:TextFormat = field.defaultTextFormat;
+         baseline(field,baselineIn(Number(fmt.size),top,h,fmt.bold == true));
+      }
+
       public static function across(field:TextField, left:Number, w:Number) : void
       {
          field.x = left + (w - (field.textWidth + GUTTER * 2)) / 2;
       }
 
-      /** Sizes a field to what is written in it and puts that text's left edge at x.
-       *
-       *  A field left wider than its word is not merely untidy: a sprite's clicks are
-       *  its children's as well as its own, and a child field reaching past the box
-       *  drawn around it takes the clicks out there too. That is a control whose hitbox
-       *  does not sit where the control does, which no amount of moving the box fixes. */
       public static function hug(field:TextField, x:Number) : void
       {
          field.width = field.textWidth + GUTTER * 2;
@@ -523,17 +457,6 @@ package
          field.x = x - GUTTER;
       }
 
-      /** Makes a line fit the width it has by getting smaller, and answers the size it
-       *  settled on.
-       *
-       *  The other way to make text fit is `elide`, and for a name it is the wrong one:
-       *  a club called something is not a club called something else with a dot after
-       *  it, and a player looking for their own club wants to read it. A point or two
-       *  down is a name that is still the name.
-       *
-       *  Stops at `floor` and leaves whatever is left over the edge, because a field
-       *  that keeps shrinking to fit an absurd string ends up unreadable rather than
-       *  merely tight. */
       public static function fit(field:TextField, wide:Number, size:int, floor:int) : int
       {
          var at:int = size;
@@ -555,20 +478,6 @@ package
          return at;
       }
 
-      /** A name made to fit a box by wrapping and by shrinking, never by cutting.
-       *
-       *  `fit` is the same answer for a box one line tall. This is for one with room for
-       *  more: the field wraps at every size tried, so the first size whose wrapped text
-       *  fits both the width and the height wins - which is one line where one line will
-       *  do, and two only when no readable size fits on one.
-       *
-       *  Never truncates. A name is what the player is called and half of it with a dot
-       *  after it is a different name, so the floor is a size rather than a length, and
-       *  a string absurd enough to beat the floor is left over the edge where it can be
-       *  seen rather than silently cut.
-       *
-       *  Returns the size it settled on, and leaves the field the height its lines took
-       *  so the caller can put the next thing under it. */
       public static function fitBox(field:TextField, wide:Number, high:Number, size:int,
                                     floor:int) : int
       {
@@ -593,10 +502,6 @@ package
          return at;
       }
 
-      /** Cuts a line down to the width it has and ends it in an ellipsis. A set of
-       *  choices is written out in full where it fits, because the words are what a
-       *  player picked and a count is not, and it has to stop somewhere when it does
-       *  not. */
       public static function elide(field:TextField, wide:Number) : void
       {
          var body:String = field.text;
@@ -607,9 +512,6 @@ package
          }
       }
 
-      /** The same cut made against a wrapping field's line count rather than one line's
-       *  width. A name too long for the lines it has is shortened until it fits them,
-       *  which is what keeps a row the height it was measured at. */
       public static function elideLines(field:TextField, lines:int) : void
       {
          var body:String = field.text;
@@ -620,10 +522,6 @@ package
          }
       }
 
-      /** Puts a field at a different size, keeping everything else about its format.
-       *  A field is built once and lives as long as the control it is in, so a text
-       *  size the player can change has to reach the fields that are already there.
-       *  The getter hands back a copy, so the shared format is not touched. */
       public static function resize(field:TextField, size:int) : void
       {
          var fmt:TextFormat = field.defaultTextFormat;
@@ -639,9 +537,6 @@ package
          }
       }
 
-      /** Three bars: the settings glyph on every screen that has one. Drawn from a
-       *  corner rather than a centre because it goes into a button's face at a fixed
-       *  inset. */
       public static function gear(target:*, x:int = 7, y:int = 8, color:uint = 0) : *
       {
          var i:int = 0;
@@ -653,8 +548,32 @@ package
          return target;
       }
 
-      /** A colour taken a little way toward the text colour, keeping whatever
-       *  transparency it had - blend() and shade() both drop it. */
+      public static function heart(target:*, cx:Number, cy:Number, w:int, h:int, color:uint, solid:Boolean = false, opacity:Number = 1) : *
+      {
+         var up:Number = w / 4;
+         var down:Number = h / 2;
+         var g:* = target.graphics;
+         if(solid)
+         {
+            g.beginFill(color & 0xFFFFFF,opacity);
+         }
+         else
+         {
+            g.lineStyle(1.4,color & 0xFFFFFF,opacity);
+         }
+         g.moveTo(cx,cy - up);
+         g.curveTo(cx + up * 2.1,cy - up * 2.1,cx + up * 2,cy);
+         g.curveTo(cx + up,cy + up * 1.5,cx,cy + down);
+         g.curveTo(cx - up,cy + up * 1.5,cx - up * 2,cy);
+         g.curveTo(cx - up * 2.1,cy - up * 2.1,cx,cy - up);
+         if(solid)
+         {
+            g.endFill();
+         }
+         g.lineStyle();
+         return target;
+      }
+
       public static function lift(color:uint, t:Number) : uint
       {
          return blend(color,VALUE,t) | color & 0xFF000000;
@@ -665,36 +584,22 @@ package
          return shade(color,percent) | color & 0xFF000000;
       }
 
-      /** The accent, filled. Every solid run of it - a slider's travel, a ticked box -
-       *  is drawn through here, so one gradient covers the lot and a run of colour
-       *  reads the same whatever control it is in. */
       public static function accent(target:*, x:int, y:int, w:int, h:int) : *
       {
          return vertical(target,x,y,w,h,CYAN,sink(CYAN,FILL));
       }
 
-      /** A vertical gradient with its ends pushed apart. The raised greys sit within a
-       *  few values of each other, so a plate drawn straight from the pair reads flat;
-       *  lifting one end and sinking the other keeps the colours the player set and
-       *  makes the shape of the button visible.
-       *
-       *  Light on top, dark underneath - a face catching the light from above is what
-       *  says raised at all. Drawn the other way up it reads as a dent. Pressing flips
-       *  the whole thing, which is the same rule read upside down. */
       public static function raised(target:*, x:int, y:int, w:int, h:int,
                                     light:uint, dark:uint) : *
       {
          return vertical(target,x,y,w,h,lift(light,LIFT),sink(dark,SINK));
       }
 
-      /** htmlText discards the field's own alignment, so colour goes in the markup
-       *  and the alignment stays with it. */
       public static function tint(body:String = "", color:uint = 0xFFFFFF) : String
       {
          return "<font color=\"#" + Config.hex(color) + "\">" + body + "</font>";
       }
 
-      /** 0-30 red, 30-50 orange, 50-70 yellow, 70-99 green, 100 cyan. */
       public static function gradeFor(fraction:Number) : uint
       {
          var pct:Number = fraction * 100;
@@ -705,7 +610,6 @@ package
          return CYAN;
       }
 
-      /** The same bands as a continuous ramp, for bars that fill rather than grade. */
       public static function rampFor(fraction:Number) : uint
       {
          if(fraction < 0.33) { return blend(RED,ORANGE,fraction / 0.33); }
@@ -713,9 +617,6 @@ package
          return blend(YELLOW,GREEN,(fraction - 0.66) / 0.34);
       }
 
-      /** Hue in turns, saturation and value 0-1. The colour picker walks a grid of
-       *  these rather than of stored swatches, so every hue at every shade is on the
-       *  panel without a table of them being written down. */
       public static function hsv(hue:Number, sat:Number, val:Number) : uint
       {
          var h:Number = (hue - Math.floor(hue)) * 6;
@@ -735,10 +636,6 @@ package
          return pack(val,p,q);
       }
 
-      /** The way back: hue in turns, saturation and value 0-1, as a three-element
-       *  array. A grey has no hue to report, so it reports zero and the caller keeps
-       *  whichever hue it was already showing - otherwise dragging a colour down to
-       *  black would lose the hue and come back up red. */
       public static function hsvOf(color:uint) : Array
       {
          var r:Number = (color >> 16 & 0xFF) / 255;
@@ -781,8 +678,6 @@ package
               | uint((color & 0xFF) * k);
       }
 
-      /** The grey lattice a translucent colour is shown against, so "half transparent"
-       *  reads as that rather than as a slightly different grey. */
       public static function checker(target:*, x:int = 0, y:int = 0, w:int = 0, h:int = 0,
                                      size:int = 6) : *
       {
@@ -812,8 +707,6 @@ package
          return target;
       }
 
-      /** A one-pixel border with its own fill inside. Every border in here is a
-       *  filled rect rather than a stroke, so nothing straddles a half pixel. */
       public static function framed(target:*, x:int = 0, y:int = 0, w:int = 0, h:int = 0,
                                     inner:uint = 0, edge:uint = 0, alpha:Number = 1) : *
       {
@@ -880,7 +773,6 @@ package
                      [solidity(top),solidity(middle),solidity(bottom)],[0,128,255]);
       }
 
-      /** The seven-colour sweep chaos rarity is drawn with. */
       public static function chaos(target:*, x:int, y:int, w:int, h:int) : *
       {
          var box:Matrix = new Matrix();
@@ -891,8 +783,6 @@ package
          return target;
       }
 
-      /** The full hue circle, bottom to top, for the strip beside a colour square.
-       *  Ends where it starts so the wrap is not a seam. */
       public static function hueStrip(target:*, x:int, y:int, w:int, h:int) : *
       {
          return ramp(target,x,y,w,h,HUES,HUE_ALPHA,HUE_STOP);
@@ -909,8 +799,6 @@ package
          return target;
       }
 
-      /** The barred circle drawn on a slot that is empty because the player took the
-       *  item off deliberately - hat, face and weapon can be left unstyled. */
       public static function noEntry(target:*, x:int = 0, y:int = 0, radius:Number = 0,
                                      color:uint = 0, hole:uint = 0, alpha:Number = 1) : *
       {
@@ -944,20 +832,6 @@ package
          return target;
       }
 
-      /** One five-pointed pip of a gem's quality, outlined so it reads against the
-       *  item icon behind it.
-       *
-       *  The centre is a Number and not an int: a row of pips is placed at a fractional
-       *  pitch, and rounding each one to a whole pixel is what made the gaps in a row of
-       *  five come out uneven.
-       *
-       *  A point straight up, because that is which way a star is. The old angle was a
-       *  step and a half off and every pip on every screen sat tilted.
-       *
-       *  The outline is a fraction of the radius and not a fixed 2.5. A stroke is drawn
-       *  centred on the path, so half of it eats inwards, and the waist of a pip at the
-       *  size a five-star row is drawn at is barely two pixels across - 2.5 swallowed the
-       *  fill and left the row a smear of black. */
       public static function pip(target:*, x:Number = 0, y:Number = 0, radius:Number = 0,
                                  color:uint = 0, alpha:Number = 1) : *
       {
@@ -982,14 +856,11 @@ package
          return target;
       }
 
-      /** Number rather than int: a leaderboard score past 2^31 wraps negative under an
-       *  int cast, so the whole part is taken with Math instead. */
       public static function group(value:Number) : String
       {
          return commas(String(value < 0 ? Math.ceil(value) : Math.floor(value)));
       }
 
-      /** Same grouping, on a string that may carry a decimal tail or a percent sign. */
       public static function groupText(body:String) : String
       {
          var text:String = body;
@@ -1009,9 +880,6 @@ package
          return commas(text) + tail + suffix;
       }
 
-      /** Thousands separators, counting back from the end so a leading sign is left
-       *  alone. Character by character rather than by pattern, for the same reason
-       *  titleCase is. */
       private static function commas(digits:String) : String
       {
          var out:String = "";
@@ -1049,9 +917,6 @@ package
          return found.join(" - ");
       }
 
-      /** Capitalised word by word. Written against the string directly - Iggy takes a
-       *  RegExp but not a replace with a function behind it, and a rejected call takes
-       *  the whole screen down with nothing in any log. */
       public static function titleCase(body:String) : String
       {
          if(body == null || body == "")

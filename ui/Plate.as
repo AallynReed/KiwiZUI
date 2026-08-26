@@ -4,20 +4,14 @@ package ui
    import flash.display.Shape;
    import flash.display.Sprite;
    import flash.events.MouseEvent;
+   import flash.external.ExternalInterface;
+   import flash.geom.Point;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
 
-   /** A flat plate that repaints out of the palette rather than baking it in, so a
-    *  colour arriving from the config reaches every button already on screen.
-    *
-    *  The plate is drawn into a child rather than into its own graphics, because Iggy
-    *  measures a sprite by its children: a plate with no caption and nothing but its
-    *  own graphics came back zero wide, and a control that measures zero does not
-    *  merely miss its own clicks - it takes the ones around it too. */
    public class Plate extends Sprite
    {
 
-      /** Between a mark and the word beside it. */
       private static const ICON_GAP:int = 6;
 
       public var caption:TextField;
@@ -26,35 +20,24 @@ package ui
 
       public var live:Boolean = true;
 
-      /** Drawn over the plate after it is framed, for a button whose face is a mark
-       *  rather than a word. It draws into `face`, never into the plate's own
-       *  graphics: a sprite's own drawing sits under its children, so a mark put there
-       *  would be buried by the box. Reads the caption colour, so it lights with the
-       *  rest. */
       public var mark:Function = null;
 
       public var face:Shape = new Shape();
 
-      /** A mark beside the caption, for a plate whose subject is a thing rather than a
-       *  word - a currency, an item. Null until one is set, so a plate that never asks
-       *  for one is exactly the plate it always was. */
       public var mark2:DisplayObject;
 
-      /** Kept separately from mark2 so a plate that binds a texture path does not
-       *  rebuild the bitmap it is binding onto each time. */
       public var icon:Icon;
 
-      /** Set when the owner works out the hover itself. The plate then ignores its own
-       *  roll events rather than being taken off the mouse: turning the mouse off a
-       *  header button stopped clicks reaching anything at all in Iggy. */
       public var driven:Boolean = false;
 
       public var on:Boolean = false;
 
-      /** One of a run of buttons that share a single frame drawn around the lot of them.
-       *  A bare plate draws no edge of its own and says it is current by lifting its
-       *  face, because a border on every segment of a group reads as a row of buttons
-       *  rather than as one control with a choice in it. */
+      public var tipTitle:String = "";
+
+      public var tip:String = "";
+
+      public var anchor:Function;
+
       public var bare:Boolean = false;
 
       private var w:int;
@@ -70,9 +53,6 @@ package ui
          this.h = h;
          addChild(this.box);
          addChild(this.face);
-         /* Pinned for the same reason ui.Button is: a mark-only plate has no caption
-            text, and a caption that measures zero wide is what put an invisible button
-            across a header once already. */
          this.caption = renderer.pin(renderer.label(0,0,size,TextFieldAutoSize.CENTER,"",w,h,false,true),w,size);
          this.caption.x = 0;
          addChild(this.caption);
@@ -82,9 +62,6 @@ package ui
          addEventListener(MouseEvent.MOUSE_DOWN,this.onPress);
       }
 
-      /** A plate whose size is decided by a layout rather than at construction. The
-       *  caption is pinned to a width, so it has to be told the new one or the text
-       *  keeps centring on the old box. */
       public function resize(w:int, h:int) : void
       {
          this.w = w;
@@ -100,8 +77,6 @@ package ui
          this.place();
       }
 
-      /** Binds a game texture to the mark and says whether one arrived, so a caller can
-       *  put the word back rather than leave a plate carrying a bare number. */
       public function setIcon(texture:String, size:int) : Boolean
       {
          if(this.icon == null)
@@ -113,8 +88,6 @@ package ui
          return this.icon.visible;
       }
 
-      /** Any picture at all as the mark - a grafted symbol, most of the time, because a
-       *  texture path only resolves for art the game already has resident. */
       public function setMark(art:DisplayObject) : void
       {
          if(this.mark2 != art)
@@ -132,10 +105,6 @@ package ui
          this.place();
       }
 
-      /** The mark and the word are centred as one, so the plate reads as a single label
-       *  rather than as a picture with a number pushed off to the side. The caption keeps
-       *  its full width and its centre alignment; shifting it is what puts the text
-       *  where the pair wants it, and the shift is zero when there is no mark. */
       private function place() : void
       {
          var span:Number = 0;
@@ -197,7 +166,25 @@ package ui
          {
             this.hot = on;
             this.paint();
+            this.tell();
          }
+      }
+
+      private function tell() : void
+      {
+         var top:Point = null;
+         if(this.tip.length == 0 || !IggyFunctions.inIggy)
+         {
+            return;
+         }
+         if(!this.hot || !this.live)
+         {
+            Tip.hide();
+            return;
+         }
+         top = this.anchor != null ? Point(this.anchor(this))
+                                   : localToGlobal(new Point(this.w * 0.5,0));
+         ExternalInterface.call("TOOLTIP.SHOW",top.x,top.y,this.tipTitle,this.tip);
       }
 
       private function onHover(e:MouseEvent) : void
@@ -208,8 +195,6 @@ package ui
          }
       }
 
-      /** A driven plate does not sound its own press, for the same reason it does not
-       *  light its own hover: the container is what decides the press was this one's. */
       private function onPress(e:MouseEvent) : void
       {
          if(!this.driven)

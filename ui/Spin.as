@@ -8,16 +8,6 @@ package ui
    import flash.text.TextFieldType;
    import flash.ui.Keyboard;
 
-   /** A number, stepped by the buttons either side of it, nudged by the arrow keys, or
-    *  typed straight in.
-    *
-    *  Stepper is the same shape and stays separate: it reads a zero as a word - "Auto",
-    *  "Off" - and a box that can be typed into cannot also mean that, because the digit
-    *  and the word are then two answers to the same question. A control with a mode that
-    *  contradicts itself is worse than two controls.
-    *
-    *  The value is a plain reading until it is clicked. A row of boxes reads as a form
-    *  and a row of numbers reads as settings, and most of the time nobody types. */
    public class Spin extends Option
    {
 
@@ -49,8 +39,6 @@ package ui
 
       private var held:Number = 0;
 
-      /** The ceiling leads because it is the one every caller has to say. A floor of one
-       *  and a step of one are what most numbers on a screen want, so they fall away. */
       public function Spin(key:String, text:String, w:int, top:Number,
                            low:Number = 1, step:Number = 1,
                            places:int = 0, suffix:String = "")
@@ -77,8 +65,6 @@ package ui
          addEventListener(MouseEvent.CLICK,this.onClick);
       }
 
-      /** Rounded before it is written, so a run of 0.05 steps cannot leave a float tail
-       *  like 0.9500000000001 in the config. */
       override public function get literal() : String
       {
          var scale:Number = Math.pow(10,this.places);
@@ -149,8 +135,6 @@ package ui
          this.edit(true);
       }
 
-      /** The suffix comes off while it is being typed into, because it is a reading and
-       *  not part of the number - left on, it is the first thing a caret lands in. */
       private function edit(on:Boolean) : void
       {
          this.editing = on;
@@ -188,9 +172,6 @@ package ui
          this.commit(true);
       }
 
-      /** A typed number is held to the limits but not to the step: the step is how far
-       *  the buttons and the arrows move, and someone who has typed a figure has said
-       *  which one they meant. Escape puts the reading back untouched. */
       private function commit(take:Boolean) : void
       {
          if(!this.editing)

@@ -5,9 +5,6 @@ package ui
    import flash.ui.Keyboard;
    import flash.text.TextFieldAutoSize;
 
-   /** A number, stepped rather than dragged, for the values worth setting exactly.
-    *  Where the range matters more than the figure a Slider reads better, and costs
-    *  the same one write because it only commits on release. */
    public class Stepper extends Option
    {
 
@@ -59,8 +56,6 @@ package ui
          this.plus.addEventListener(MouseEvent.CLICK,this.onUp);
       }
 
-      /** Rounded before it is written, so a run of 0.05 steps cannot leave a float
-       *  tail like 0.9500000000001 in the config. */
       override public function get literal() : String
       {
          var scale:Number = Math.pow(10,this.places);
