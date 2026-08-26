@@ -95,6 +95,7 @@ and a key naming only the mod would have the second statement land on top of the
 | `color` | — |
 | `alpha` | — |
 | `input` | maximum length |
+| `list` | the words in the box that adds a value |
 | `heading` | — (not a setting; a title and a rule) |
 
 `zero` is the word shown in place of a zero — `Auto`, `Off`. `suffix` is the unit. Neither
@@ -102,6 +103,10 @@ may contain a comma, which is the one thing the range list cannot spell.
 
 A `combo` label is free text, so only the first `=` splits a pair, and a choice with no
 `=` stands for itself.
+
+A `list` carries its values joined by commas, in order, so a comma is the one character a
+value may not contain. Read one back with `List.split()`, which is the same reader the
+control writes through.
 
 ### Escaping
 

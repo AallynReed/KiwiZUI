@@ -105,6 +105,31 @@ TraceOutputFileEnable=1
 
 Output then lands in `%APPDATA%\Macromedia\Flash Player\Logs\flashlog.txt`.
 
+**Compile the probe with `-debug=true` or nothing is ever written.** A release build traces
+nothing even under `FlashPlayerDebugger.exe`, and an empty log with `mm.cfg` correctly set
+reads exactly like a screen that died before its first line. It is one flag and it is the
+first thing to check.
+
+**The player will not open a path with spaces**, and every mod folder in this repo has
+them. It opens an empty white window, writes nothing to `flashlog.txt` and reports no
+error, which looks exactly like the screen having died on load. Copy the SWF somewhere
+space-free and open that.
+
+To capture what it drew: `MoveWindow` the player to the stage size, then `GetClientRect` +
+`ClientToScreen` + `CopyFromScreen` off its `MainWindowHandle`. `GetWindowRect` includes
+the chrome and lands the crop over the menu bar.
+
+`IggyFunctions.translate` returns the key outside Iggy, so every label renders as
+`$RewardLabel` and every countdown as `$TimeUnit_Minutes_short`. Geometry is worth judging
+from a shot like that; text fit is not, because the strings are far wider than the game's.
+
+**A stub `IggyFunctions` fixes that, and is what makes anything keyed by a translation
+testable at all.** Put a folder ahead of `lib` on the source path with its own copy of the
+class, same signatures, and a `translate` that answers out of a map built from the real
+`.binfab` files. The mod's own code is untouched and unaware. Anything that matches on a
+translated string - the fish table keys all 146 of its species that way - simply cannot be
+exercised outside the game without it, because the real strings never arrive.
+
 What this cannot check is drawing, and it cannot check anything Iggy does differently.
 Compile `test/Gallery.as` and look at it.
 

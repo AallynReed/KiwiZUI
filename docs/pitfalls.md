@@ -340,6 +340,41 @@ before it writes anything.
 
 ---
 
+## The client itself dies a second after a screen opens
+
+**Cause.** Two SWFs of one mod relaying each other's config, forever.
+
+`Config.mirror()` keeps a second section in step, because Trove gives each SWF of a mod
+its own section and lets neither read the other's. The relay was fired from `note()` -
+the read handler - so a value arriving at `gems.swf` was written to `charsheet.swf`'s
+section, which Trove relayed in to `charsheet.swf`, which wrote it back to `gems.swf`'s.
+Both screens are live at once, so that exchange has no end, and the client goes down with
+it about a second after the screen opens.
+
+The minidump is unambiguous once read: an access violation **writing** to address 0, at a
+site the compiler put there on purpose -
+
+```
++0x89DBD7  inc  esi
++0x89DBD9  cmp  esi, 3
++0x89DBDC  jl   +0x89DBEC
++0x89DBE4  mov  dword ptr [0], r14d
+```
+
+Three strikes and a deliberate null write: the engine's own assert, not a stray pointer.
+`OnSaveConfig` arriving faster than it can be serviced is what walks into it.
+
+**Fix.** Relay on *change*, never on arrival. The return leg then carries a value equal to
+what is already held, there is nothing to pass on, and the exchange settles in one round
+trip.
+
+The rule in CLAUDE.md - never write config from inside the read handler - is this, and it
+was written the first time this happened. It cost a mod then and the client this time.
+Mirroring is the one place a write looks like it belongs on the read path, so it is the
+one place to check for it.
+
+---
+
 ## Two mods patch the same file and the wrong one wins
 
 **Cause.** Trove loads both and which one wins is arbitrary. There is no merge and no
@@ -349,6 +384,33 @@ load order.
 `.tmod`, and move any mod that packs a file you also pack into `<Trove>\mods_disabled\`
 before installing. Trove only scans `mods`, so that is a complete removal as far as the
 game is concerned, and the player keeps the mod.
+
+---
+
+## A gem reads on every screen except one, and that one shows nothing
+
+**Cause.** The screen truncates a stat, and the reader was built as if it rounded.
+
+A printed stat names an interval, not a value, and which interval depends on how the
+screen got the digits. `GemReader` reduced the printed number back through the tier's
+own table and allowed it half a print unit either way. Trove truncates, so the true
+value is up to a *whole* unit above what is printed and never below it - and a stat
+that rolled near the foot of its band therefore prints a number the band cannot
+produce. The layout search then finds no legal boost layout at all, and a gem that is
+recognised as a gem, whose level and rarity and Power Rank were all read, is graded
+with nothing.
+
+Nothing in the fuzz caught it: the harness rendered its gems with Python's `format`,
+which rounds, so the case it had to survive was the one case never generated.
+
+**Fix.** Read the print as the bottom of its interval. The roll is admitted a full unit
+below the band and half a unit above, and the Power Rank is predicted from the middle of
+the interval rather than its floor. `verify_reader.py` renders truncated, which is what
+keeps the harness honest.
+
+Worth knowing that the reader's own narrowing already assumed truncation - `refineRolls`
+walks each roll *up* from what was printed, never down. The two halves of the same file
+disagreed, and only the half with the tolerance in it was wrong.
 
 ---
 

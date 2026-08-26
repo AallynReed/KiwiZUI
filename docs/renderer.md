@@ -6,14 +6,18 @@ everything already on screen.
 
 ## The palette
 
-Fourteen keys, and nothing else is settable:
+Fifteen colours, and nothing else is settable:
 
 ```
 panel  label  value  accent
-red  orange  yellow  green  purple
+red  danger  orange  yellow  green  purple
 water  air  fire  cosmic
 statlight
 ```
+
+`renderer.KEYS` carries two more that are not colours - `outline` and `outlinecolor`,
+under Text below - because they are the same thing to a config file and every mod seeds
+the one list.
 
 ```actionscript
 renderer.apply("accent", "#5FD3E8");   // from a config literal
@@ -86,6 +90,30 @@ It sizes the field for its **line box**, which is the part that goes wrong by ha
 font-size ceiling in the engine rather than as a clipped field.
 
 No font is embedded. Iggy provides Open Sans out of the client's own `ui\fonts\`.
+
+### The outline
+
+`label()` puts `SHADOW` on every field it builds, which is a no-op - the panel behind the
+text is what makes it readable. A screen whose text stands on the world needs a real one,
+and says so:
+
+```actionscript
+renderer.stamp(field, [renderer.SHADE]);   // a hard copy one pixel under the glyph
+renderer.stamp(field, zakros.INK);         // or whatever that screen tuned
+```
+
+`outline` (0-4, 0 is off) and `outlinecolor` then replace **whichever** baseline a field
+was stamped with, and putting the outline away restores it. That is why the baseline is
+kept per field rather than one for the suite: the three in use disagree, and a single
+default would flatten two of them.
+
+Fields stamped before the player turns it on are reached as well - `stamp()` records them
+in a weak-keyed `Dictionary`, so a row built for a list that has since been discarded goes
+with it. Anything built afterwards is stamped as it is made.
+
+**A field with a deliberate filter of its own stays out of it.** World Tooltip's purple
+glow on a biome name and Marketplace's two-directional stamp are not readability halos and
+are not registered, so nothing here touches them.
 
 | | |
 |---|---|

@@ -57,10 +57,25 @@ not report — `settle()` reports once, when the run of keys ends.
 | [`Input`](../ui/Input.as) | A typed-into box with a hint behind it and a cross to empty it. |
 | [`Combo`](../ui/Combo.as) | One choice out of a list. |
 | [`Multi`](../ui/Multi.as) | Any number of choices out of a list. The literal is the values joined by commas, so the file stays editable by hand. |
+| [`List`](../ui/List.as) | Any number of values the player writes themselves, in a modal that adds, removes and reorders them. Commas again, so the file stays editable by hand. |
 | [`Picker`](../ui/Picker.as) | A colour, off a square and a hue strip. Opaque. |
 | [`AlphaPicker`](../ui/AlphaPicker.as) | The same with an opacity strip. Writes `#RRGGBBAA`, or `#RRGGBB` when fully opaque. |
 | [`Heading`](../ui/Heading.as) | A section title. Not a setting. |
 | [`Cat`](../ui/Cat.as) | A foldable category. Not a setting. |
+
+`Multi` and `List` are the same distinction one step further out: `Multi` is a set taken
+from choices the mod knows, `List` is a set the mod cannot know because the player is the
+one who names it. **`List` keeps the order**, and lets it be dragged into shape — a list
+is read top down by whatever it feeds, so first and second are not the same answer, and
+that is the one thing a player cannot say by typing. `List.split()` is public so the
+screen the list feeds reads the literal through the same reader that wrote it.
+
+**`List` opens as a modal and every other popup does not**, and that is the difference
+between the two gestures rather than a preference. A dropdown hangs off its control and
+is done in one click, so it belongs where the eye already is. A list is a panel a player
+stays in until the list is right, and one hanging off a row halfway down a settings
+window spends its life being clamped back inside it. `Layer.middle()` is that shape, for
+anything else that wants it.
 
 `Stepper` and `Spin` stay separate on purpose: `Stepper` reads a zero as a word, and a box
 that can be typed into cannot also mean that — the digit and the word would be two answers
@@ -169,7 +184,7 @@ Three things in it will catch you out:
 | [`Notice`](../ui/Notice.as) | The panel that says there is no `.cfg` in `ModCfgs\`, so nothing is being kept. |
 | [`Bar`](../ui/Bar.as) | A track with a filled run and a reading beside it. |
 | [`Run`](../ui/Run.as) | A row of differently coloured words and numbers against a fixed right edge. One field per piece, never markup. |
-| [`Layer`](../ui/Layer.as) | Lifts a popup to the screen root, over an invisible sheet that closes it wherever else the next click lands. |
+| [`Layer`](../ui/Layer.as) | Lifts a popup to the screen root, over an invisible sheet that closes it wherever else the next click lands. `middle()` is the same thing as a modal: centred in the screen, over a sheet that dims it. |
 | [`Find`](../ui/Find.as) | Walks up from a click target to the slot, card or button it belongs to. |
 | [`Tip`](../ui/Tip.as) | Where a tooltip anchor goes so the engine does not open it across the window that asked for it. |
 
