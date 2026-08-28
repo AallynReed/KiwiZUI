@@ -13,6 +13,7 @@ package ui
       public function Reach()
       {
          super();
+         mouseChildren = false;
          addChild(this.pad);
       }
 
