@@ -200,6 +200,18 @@ failure looked like everything except the probe for six test cycles.
   `.png`, in any location.
 - **`BitmapData` built in ActionScript.** Nothing draws.
 - **`Loader.loadBytes` on embedded bytes.** Compiles, runs, draws nothing.
+- **The whole of `flash.net`.** No HTTP, no sockets, no `SharedObject`. Measured in game
+  with a probe that resolved each class through `getDefinitionByName` inside a `try`:
+
+  ```
+  tf=ok  dict=ok  vars=threw  ldr=threw  req=threw
+  ```
+
+  `flash.text.TextField` and `flash.utils.Dictionary` resolve, so the lookup itself works
+  and the negatives are real: `URLRequest`, `URLLoader` and `URLVariables` are all absent.
+  Do not be fooled by `iggy_w64.dll` - it carries the strings `URLLoader`, `URLRequest`
+  and `flash.net`, and none of them are registered for ActionScript to reach. No Trove SWF
+  and no mod uses them either; the only way out of a screen is `ExternalInterface`.
 
 The one route that works is grafting the art out of a vanilla SWF into your build.
 See [art.md](art.md).
