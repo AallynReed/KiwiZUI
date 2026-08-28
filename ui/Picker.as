@@ -68,6 +68,8 @@ package ui
 
       private var hot:Boolean = false;
 
+      private var zone:Reach = new Reach();
+
       public function Picker(key:String, text:String, w:int)
       {
          super(key,text,w);
@@ -311,7 +313,10 @@ package ui
          }
          Option.click();
          this.held = true;
+         this.zone.hold(this.field,this.wide,this.deep);
          this.follow();
+         this.field.addEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
+         this.field.addEventListener(MouseEvent.MOUSE_UP,this.onRelease);
          this.field.stage.addEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
          this.field.stage.addEventListener(MouseEvent.MOUSE_UP,this.onRelease);
       }
@@ -340,7 +345,14 @@ package ui
       private function release() : void
       {
          this.held = false;
-         if(this.field != null && this.field.stage != null)
+         this.zone.drop();
+         if(this.field == null)
+         {
+            return;
+         }
+         this.field.removeEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
+         this.field.removeEventListener(MouseEvent.MOUSE_UP,this.onRelease);
+         if(this.field.stage != null)
          {
             this.field.stage.removeEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
             this.field.stage.removeEventListener(MouseEvent.MOUSE_UP,this.onRelease);

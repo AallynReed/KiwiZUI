@@ -25,7 +25,7 @@ package ui
          }
          this.pad.graphics.clear();
          renderer.fill(this.pad,-OUT,-OUT,w + OUT * 2,h + OUT * 2,renderer.BLACK,0);
-         host.addChildAt(this,0);
+         host.addChild(this);
       }
 
       public function drop() : void
