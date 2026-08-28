@@ -1,5 +1,6 @@
 package ui
 {
+   import flash.display.DisplayObject;
    import flash.display.Sprite;
    import flash.events.Event;
    import flash.events.MouseEvent;
@@ -160,6 +161,22 @@ package ui
          this.build();
          Layer.show(this.popup,this,this.lane,(this.tall - SIDE) / 2 + SIDE + 1);
          this.paint();
+      }
+
+      public function openOn(host:DisplayObject, x:Number, y:Number) : void
+      {
+         if(this.popup != null)
+         {
+            Layer.hide();
+            return;
+         }
+         this.build();
+         Layer.show(this.popup,host,x,y);
+      }
+
+      public function get open() : Boolean
+      {
+         return this.popup != null;
       }
 
       private function build() : void
