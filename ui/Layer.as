@@ -156,10 +156,6 @@ package ui
       private static function within(of:DisplayObject, hit:DisplayObject) : Boolean
       {
          var box:DisplayObjectContainer = of as DisplayObjectContainer;
-         if(hit is Reach)
-         {
-            return false;
-         }
          return of == hit || box != null && hit != null && box.contains(hit);
       }
 
