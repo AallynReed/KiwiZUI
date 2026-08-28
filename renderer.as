@@ -97,7 +97,9 @@ package
 
       public static var INK:uint = 0;
 
-      private static const FMT:TextFormat = new TextFormat("Open Sans",null,VALUE,false,false,false,null,null);
+      public static var FONT:String = "Open Sans";
+
+      private static const FMT:TextFormat = new TextFormat(FONT,null,VALUE,false,false,false,null,null);
 
       private static const GUTTER:int = 2;
 
@@ -106,6 +108,8 @@ package
       private static const LINES:Object = {};
 
       private static const ASCENTS:Object = {};
+
+      private static const WIDTHS:Object = {};
 
       private static const LIFT:Number = 0.1;
 
@@ -314,7 +318,7 @@ package
 
       public static function spacedOut(size:int, spacing:Number) : TextFormat
       {
-         var out:TextFormat = new TextFormat("Open Sans",size,VALUE);
+         var out:TextFormat = new TextFormat(FONT,size,VALUE);
          out.align = TextFormatAlign.CENTER;
          out.letterSpacing = spacing;
          return out;
@@ -371,14 +375,14 @@ package
 
       private static function lineOf(size:Number, bold:Boolean = false) : Number
       {
-         var key:String = String(size) + (bold ? "b" : "");
+         var key:String = FONT + "|" + size + (bold ? "b" : "");
          var probe:TextField = null;
          var m:TextLineMetrics = null;
          var tall:Number = 0;
          if(LINES[key] == null)
          {
             probe = new TextField();
-            probe.defaultTextFormat = new TextFormat("Open Sans",size,0,bold);
+            probe.defaultTextFormat = new TextFormat(FONT,size,0,bold);
             renderer.say(probe,"Hg");
             m = probe.getLineMetrics(0);
             tall = m.ascent + m.descent;
@@ -387,14 +391,32 @@ package
          return Number(LINES[key]);
       }
 
+      public static function wideOf(body:String, size:Number, bold:Boolean = false,
+                                    spacing:Number = 0) : int
+      {
+         var key:String = FONT + "|" + body + "|" + size + (bold ? "b" : "") + "|" + spacing;
+         var probe:TextField = null;
+         var fmt:TextFormat = null;
+         if(WIDTHS[key] == null)
+         {
+            fmt = new TextFormat(FONT,size,0,bold);
+            fmt.letterSpacing = spacing;
+            probe = new TextField();
+            probe.defaultTextFormat = fmt;
+            renderer.say(probe,body);
+            WIDTHS[key] = Math.ceil(probe.textWidth) + GUTTER * 2;
+         }
+         return int(WIDTHS[key]);
+      }
+
       private static function ascentOf(size:Number, bold:Boolean = false) : Number
       {
-         var key:String = String(size) + (bold ? "b" : "");
+         var key:String = FONT + "|" + size + (bold ? "b" : "");
          var probe:TextField = null;
          if(ASCENTS[key] == null)
          {
             probe = new TextField();
-            probe.defaultTextFormat = new TextFormat("Open Sans",size,0,bold);
+            probe.defaultTextFormat = new TextFormat(FONT,size,0,bold);
             renderer.say(probe,"Hg");
             ASCENTS[key] = probe.getLineMetrics(0).ascent + GUTTER;
          }

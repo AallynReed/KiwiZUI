@@ -73,7 +73,7 @@ package ui
       private function build(color:uint) : TextField
       {
          var f:TextField = new TextField();
-         f.defaultTextFormat = new TextFormat("Open Sans",this.size,color);
+         f.defaultTextFormat = new TextFormat(renderer.FONT,this.size,color);
          f.mouseEnabled = false;
          f.height = this.size * 2;
          return f;
@@ -155,7 +155,7 @@ package ui
 
       private function place(f:TextField, at:int, wide:int, mid:int, color:uint) : void
       {
-         var fmt:TextFormat = new TextFormat("Open Sans",this.size,color);
+         var fmt:TextFormat = new TextFormat(renderer.FONT,this.size,color);
          f.x = at + 8;
          f.width = wide - 26;
          f.defaultTextFormat = fmt;
