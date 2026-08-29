@@ -200,6 +200,10 @@ failure looked like everything except the probe for six test cycles.
   `.png`, in any location.
 - **`BitmapData` built in ActionScript.** Nothing draws.
 - **`Loader.loadBytes` on embedded bytes.** Compiles, runs, draws nothing.
+- **`Vector.<T>`.** `__AS3__.vec`, the namespace every typed vector lives in, is not in
+  `iggy_w64.dll`. The bare word `Vector` is, which is how a binary scan misleads you - the
+  same trap `flash.net` sets below. Use `Array`, and a `Dictionary` where the lookup
+  matters.
 - **The whole of `flash.net`.** No HTTP, no sockets, no `SharedObject`. Measured in game
   with a probe that resolved each class through `getDefinitionByName` inside a `try`:
 
