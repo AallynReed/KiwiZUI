@@ -1,6 +1,8 @@
 package ui
 {
    import flash.display.DisplayObject;
+   import flash.display.DisplayObjectContainer;
+   import flash.display.InteractiveObject;
    import flash.geom.Point;
 
    public class Hit
@@ -9,6 +11,31 @@ package ui
       public function Hit()
       {
          super();
+      }
+
+      public static function show(host:DisplayObjectContainer, kid:DisplayObject,
+                                  on:Boolean) : void
+      {
+         kid.visible = on;
+         if(!on)
+         {
+            if(kid.parent != null)
+            {
+               kid.parent.removeChild(kid);
+            }
+         }
+         else if(kid.parent != host)
+         {
+            host.addChild(kid);
+         }
+      }
+
+      public static function blind(kid:InteractiveObject) : InteractiveObject
+      {
+         IggyFunctions.setHittestProperties(kid,IggyFunctions.HITTEST_NO_MOUSE
+                                          | IggyFunctions.HITTEST_NO_GET_OBJECTS_UNDER_POINT
+                                          | IggyFunctions.HITTEST_NO_IGGY_GET_OBJECTS_UNDER_POINT);
+         return kid;
       }
 
       public static function holds(kid:DisplayObject, w:Number, h:Number, at:Point) : Boolean
