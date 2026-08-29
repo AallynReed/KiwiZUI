@@ -105,6 +105,12 @@ package ui
          this.value = raw;
       }
 
+      public function set prompt(body:String) : void
+      {
+         renderer.say(this.hint,body);
+         this.paint();
+      }
+
       public function clear() : void
       {
          renderer.say(this.field,"");
