@@ -32,6 +32,36 @@ package
          return utc - 11 * 3600000;
       }
 
+      public static function summerTime(utc:Number) : Boolean
+      {
+         var when:Date = null;
+         var last:int = 0;
+         var past:Boolean = false;
+         if(!real(utc))
+         {
+            return false;
+         }
+         try
+         {
+            when = new Date(utc);
+         }
+         catch(e:Error)
+         {
+            return false;
+         }
+         if(when.month < 2 || when.month > 9)
+         {
+            return false;
+         }
+         if(when.month > 2 && when.month < 9)
+         {
+            return true;
+         }
+         last = 31 - (Math.floor(utc / 86400000) + 4 + 31 - when.date) % 7;
+         past = when.date > last || when.date == last && when.hours >= 1;
+         return when.month == 2 ? past : !past;
+      }
+
       public static function weekday(utc:Number) : int
       {
          var day:Number = 86400000;
@@ -128,22 +158,26 @@ package
 
       public static function wall(twelve:Boolean = false, shift:Number = 0) : String
       {
+         return stamp(now(),twelve,shift);
+      }
+
+      public static function stamp(utc:Number, twelve:Boolean = false,
+                                   shift:Number = 0) : String
+      {
          var when:Date = null;
-         var ms:Number = NaN;
+         if(!real(utc))
+         {
+            return "";
+         }
          try
          {
-            when = new Date();
+            when = new Date(utc);
          }
          catch(e:Error)
          {
             return "";
          }
-         if(when == null || !real(when.time))
-         {
-            return "";
-         }
-         ms = when.time + (shift == 0 ? localOffset(when) : shift * 3600000);
-         return face(ms,twelve);
+         return face(utc + (shift == 0 ? localOffset(when) : shift * 3600000),twelve);
       }
 
       public static function serverWall(twelve:Boolean = false) : String
