@@ -42,6 +42,8 @@ package ui
 
       private var held:int = 0;
 
+      private var menuW:int = CTRL;
+
       public function Combo(key:String, text:String, w:int, values:Array, labels:Array = null)
       {
          super(key,text,w);
@@ -167,11 +169,13 @@ package ui
          var i:int = 0;
          this.menu = new Sprite();
          this.menu.mouseChildren = false;
+         this.menuW = this.menuWide;
          this.slots = [];
          this.first = Config.clamp(this.index - (this.page >> 1),0,this.values.length - this.page,0);
          while(i < this.page)
          {
-            field = renderer.pin(renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",CTRL - 34,20),CTRL - 34,12);
+            field = renderer.pin(renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",
+                                                this.menuW - 34,20),this.menuW - 34,12);
             this.slots.push(field);
             this.menu.addChild(field);
             i++;
@@ -196,14 +200,14 @@ package ui
             return;
          }
          this.menu.graphics.clear();
-         renderer.framed(this.menu,0,0,CTRL,deep,renderer.PANEL,renderer.CYAN,1);
+         renderer.framed(this.menu,0,0,this.menuW,deep,renderer.PANEL,renderer.CYAN,1);
          while(i < this.page)
          {
             row = this.first + i;
             field = this.slots[i] as TextField;
             if(row == this.hover)
             {
-               renderer.fill(this.menu,1,1 + i * ROW,CTRL - 2,ROW,renderer.HEADER,1);
+               renderer.fill(this.menu,1,1 + i * ROW,this.menuW - 2,ROW,renderer.HEADER,1);
             }
             if(this.boxes)
             {
@@ -232,9 +236,32 @@ package ui
          {
             return;
          }
-         renderer.fill(this.menu,CTRL - 4,1,3,span,renderer.HEADER,1);
-         renderer.fill(this.menu,CTRL - 4,1 + span * this.first / this.values.length,
+         renderer.fill(this.menu,this.menuW - 4,1,3,span,renderer.HEADER,1);
+         renderer.fill(this.menu,this.menuW - 4,1 + span * this.first / this.values.length,
                        3,Math.max(8,span * this.page / this.values.length),renderer.BORDER,1);
+      }
+
+      public function get menuWide() : int
+      {
+         var field:TextField = null;
+         var most:Number = 0;
+         var room:int = Layer.roomWide;
+         var i:int = 0;
+         if(room <= CTRL)
+         {
+            return CTRL;
+         }
+         field = renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",0,20);
+         while(i < this.labels.length)
+         {
+            renderer.say(field,String(this.labels[i]));
+            if(field.textWidth > most)
+            {
+               most = field.textWidth;
+            }
+            i++;
+         }
+         return Config.clamp(Math.ceil(most) + 38,CTRL,room - 8,CTRL);
       }
 
       private function onTrack(e:MouseEvent) : void

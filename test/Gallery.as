@@ -158,6 +158,15 @@ package
          trace(body);
       }
 
+      private function said(name:String, got:Boolean) : void
+      {
+         if(!got)
+         {
+            this.failures++;
+         }
+         this.say((got ? "pass  " : "FAIL  ") + name);
+      }
+
       private function same(name:String, got:*, want:*) : void
       {
          var ok:Boolean = String(got) == String(want);
@@ -645,6 +654,25 @@ package
          this.same("combo shows its label",c.summary,"Power rank");
          c.from = "not-a-value";
          this.same("combo keeps its choice on junk",c.literal,"power");
+         this.checkComboWidth();
+      }
+
+      private function checkComboWidth() : void
+      {
+         var room:int = 420;
+         var brief:Combo = new Combo("s","S",300,["a","b"],["Level","Power rank"]);
+         var long:Combo = new Combo("l","L",300,["a","b"],
+                                    ["Are you sure you want to clear this cornerstone? "
+                                   + "Everything built on it will be destroyed.","Level"]);
+         Layer.frame(room,room);
+         this.same("a menu of short labels stays the width of its control",
+                   brief.menuWide,Option.CTRL);
+         this.said("a menu widens to the label that needs it",
+                   long.menuWide > Option.CTRL);
+         this.said("and never past the frame it opens in",long.menuWide <= room - 8);
+         Layer.frame(0,0);
+         this.same("with no frame to measure against it does not widen",
+                   long.menuWide,Option.CTRL);
       }
 
       private function checkMulti() : void
