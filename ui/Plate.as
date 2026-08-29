@@ -115,15 +115,17 @@ package ui
          var left:Number = 0;
          if(this.mark2 == null || !this.mark2.visible)
          {
+            this.caption.autoSize = TextFieldAutoSize.NONE;
+            this.caption.width = this.w;
             this.caption.x = 0;
             return;
          }
+         this.caption.autoSize = TextFieldAutoSize.LEFT;
          span = this.mark2.width + ICON_GAP + this.caption.textWidth;
          left = (this.w - span) / 2;
          this.mark2.x = left;
          this.mark2.y = (this.h - this.mark2.height) / 2;
-         this.caption.x = left + this.mark2.width + ICON_GAP
-                        - (this.w - this.caption.textWidth) / 2;
+         this.caption.x = left + this.mark2.width + ICON_GAP;
       }
 
       public function paint() : void
