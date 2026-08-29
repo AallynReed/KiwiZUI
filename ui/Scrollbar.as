@@ -1,7 +1,9 @@
 package ui
 {
-   import flash.display.Sprite;
    import flash.display.Shape;
+   import flash.display.Sprite;
+   import flash.display.Stage;
+   import flash.events.Event;
    import flash.events.MouseEvent;
    import flash.geom.Point;
 
@@ -21,6 +23,8 @@ package ui
       private var zone:Reach = new Reach();
 
       private var home:Sprite;
+
+      private var watch:Stage;
 
       private var view:Number = 0;
 
@@ -114,10 +118,16 @@ package ui
          this.zone.hold(this.home,W,this.view);
          this.zone.addEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
          this.zone.addEventListener(MouseEvent.MOUSE_UP,this.onDrop);
-         if(stage != null)
+         if(this.home != null)
          {
-            stage.addEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
-            stage.addEventListener(MouseEvent.MOUSE_UP,this.onDrop);
+            this.home.addEventListener(MouseEvent.MOUSE_UP,this.onDrop);
+         }
+         this.watch = stage;
+         if(this.watch != null)
+         {
+            this.watch.addEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
+            this.watch.addEventListener(MouseEvent.MOUSE_UP,this.onDrop);
+            this.watch.addEventListener(Event.MOUSE_LEAVE,this.onDrop);
          }
          this.seek(y);
          this.repaint();
@@ -133,10 +143,16 @@ package ui
          this.zone.removeEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
          this.zone.removeEventListener(MouseEvent.MOUSE_UP,this.onDrop);
          this.zone.drop();
-         if(stage != null)
+         if(this.home != null)
          {
-            stage.removeEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
-            stage.removeEventListener(MouseEvent.MOUSE_UP,this.onDrop);
+            this.home.removeEventListener(MouseEvent.MOUSE_UP,this.onDrop);
+         }
+         if(this.watch != null)
+         {
+            this.watch.removeEventListener(MouseEvent.MOUSE_MOVE,this.onDrag);
+            this.watch.removeEventListener(MouseEvent.MOUSE_UP,this.onDrop);
+            this.watch.removeEventListener(Event.MOUSE_LEAVE,this.onDrop);
+            this.watch = null;
          }
          this.repaint();
       }
@@ -174,7 +190,7 @@ package ui
          this.seek(this.home.globalToLocal(new Point(e.stageX,e.stageY)).y - this.y);
       }
 
-      private function onDrop(e:MouseEvent) : void
+      private function onDrop(e:Event) : void
       {
          this.release();
       }
