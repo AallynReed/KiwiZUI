@@ -22,7 +22,8 @@ the one list.
 ```actionscript
 renderer.apply("accent", "#5FD3E8");   // from a config literal
 renderer.colorOf("accent");            // back out
-renderer.defaultOf("accent");          // the shipped default
+renderer.defaultOf("accent");          // what it holds now
+renderer.stockOf("accent");            // what it was shipped as
 renderer.KEYS;                         // all of them, for seeding
 ```
 

@@ -150,6 +150,8 @@ package
                                         "yellow","green","purple","water","air","fire","cosmic",
                                         "statlight","outline","outlinecolor"];
 
+      private static const STOCK:Object = {};
+
       public function renderer()
       {
          super();
@@ -163,6 +165,7 @@ package
       public static function apply(key:String, raw:String) : Boolean
       {
          var name:String = key.toLowerCase();
+         keep(name);
          if(name == "outline")
          {
             RING = Config.number(raw,0,MAXRING,0);
@@ -279,6 +282,29 @@ package
             return Config.hex(INK);
          }
          return Config.hexa(colorOf(key),alphaOf(key));
+      }
+
+      private static function owns(name:String) : Boolean
+      {
+         return FIELD[name] != null || name == "outline" || name == "outlinecolor";
+      }
+
+      private static function keep(name:String) : void
+      {
+         if(STOCK[name] == null && owns(name))
+         {
+            STOCK[name] = defaultOf(name);
+         }
+      }
+
+      public static function stockOf(key:String) : String
+      {
+         var name:String = key.toLowerCase();
+         if(STOCK[name] != null)
+         {
+            return String(STOCK[name]);
+         }
+         return owns(name) ? defaultOf(name) : "";
       }
 
       public static function stamp(field:TextField, own:Array = null) : TextField

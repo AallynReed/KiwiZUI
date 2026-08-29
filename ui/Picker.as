@@ -105,6 +105,17 @@ package ui
                                  : "#" + Config.hex(this.color);
       }
 
+      public function get preset() : String
+      {
+         var raw:String = renderer.stockOf(this.key);
+         if(raw.length == 0)
+         {
+            return "";
+         }
+         return this.translucent ? Config.hexa(Config.color(raw,this.color),Config.alpha(raw,1))
+                                 : "#" + Config.hex(Config.color(raw,this.color));
+      }
+
       override public function set from(raw:String) : void
       {
          var shade:uint = Config.color(raw,this.color);
@@ -201,6 +212,7 @@ package ui
          this.marks.mouseChildren = false;
          this.hex = new Input("hex","",this.content,this.literal);
          this.hex.value = this.literal;
+         this.hex.clears = this.preset;
          this.hex.x = PAD;
          this.hex.y = HEX_Y;
          this.hex.addEventListener(Event.CHANGE,this.onHex);

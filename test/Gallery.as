@@ -730,6 +730,11 @@ package
          this.same("picker reads bare hex",p.literal,"#1A2B3C");
          p.from = "not a colour";
          this.same("picker keeps its colour on junk",p.literal,"#1A2B3C");
+         this.same("picker resets to the shipped colour",p.preset,"#5FD3E8");
+         this.same("an alpha picker resets to the shipped colour",
+                   new AlphaPicker("panel","Panel",300).preset,Config.hexa(0x0B0C0E,1 - 15 / 255));
+         this.same("a picker with no shipped colour has nothing to reset to",
+                   new Picker("pinned","Pinned",300).preset,"");
       }
 
       private function checkInput() : void
@@ -740,6 +745,11 @@ package
          this.same("input value is its text",i.value,"Effects");
          i.clear();
          this.same("input clears",i.literal,"");
+         this.same("and the cross has nothing left to do",i.clearable,false);
+         i.clears = "#FF8800";
+         this.same("a default gives the cross something to do",i.clearable,true);
+         i.clear();
+         this.same("and the cross restores it",i.literal,"#FF8800");
       }
 
       private function checkAccentPlacement() : void
@@ -823,6 +833,8 @@ package
          this.same("and reports the eight digit literal",renderer.defaultOf("accent"),"#5FD3E880");
          renderer.apply("accent","#5FD3E800");
          this.same("fully clear is alpha zero",renderer.alphaOf("accent"),0);
+         this.same("the shipped colour outlives a change",renderer.stockOf("accent"),"#5FD3E8");
+         this.same("a key renderer does not own has no shipped colour",renderer.stockOf("pinned"),"");
          renderer.apply("accent","#5FD3E8");
          this.same("six digits put it back to opaque",renderer.alphaOf("accent"),1);
          this.same("a blend of two colours is opaque",

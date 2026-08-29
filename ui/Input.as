@@ -33,6 +33,8 @@ package ui
 
       public var driven:Boolean = false;
 
+      public var clears:String = "";
+
       public function Input(key:String, text:String, w:int, prompt:String = "", size:int = 12)
       {
          super(key,text,w);
@@ -113,9 +115,9 @@ package ui
 
       public function clear() : void
       {
-         renderer.say(this.field,"");
+         renderer.say(this.field,this.clears);
          this.paint();
-         this.report();
+         this.report(true);
       }
 
       public function compose(start:int, length:int, body:String) : void
@@ -123,6 +125,11 @@ package ui
          this.field.replaceText(start,start + length,body);
          this.paint();
          this.report();
+      }
+
+      public function get clearable() : Boolean
+      {
+         return this.field.text != this.clears;
       }
 
       private function get boxAt() : int
@@ -149,7 +156,7 @@ package ui
          this.place(this.field,at,wide,mid,renderer.VALUE);
          this.place(this.hint,at,wide,mid,renderer.LABEL);
          this.hint.visible = empty;
-         this.cross(at + wide - 10,mid + (BOX >> 1),!empty);
+         this.cross(at + wide - 10,mid + (BOX >> 1),this.clearable);
          if(this.key.length > 0)
          {
             this.apply.x = at + wide + 4;
@@ -194,7 +201,7 @@ package ui
             return false;
          }
          Option.click();
-         if(this.field.text.length > 0 && at.x > edge - 20)
+         if(this.clearable && at.x > edge - 20)
          {
             this.clear();
             return true;
@@ -241,7 +248,7 @@ package ui
          {
             return;
          }
-         if(this.field.text.length > 0 && this.mouseX > edge - 20 && this.mouseX < edge)
+         if(this.clearable && this.mouseX > edge - 20 && this.mouseX < edge)
          {
             Option.click();
             this.clear();
@@ -254,10 +261,10 @@ package ui
          this.report();
       }
 
-      private function report() : void
+      private function report(now:Boolean = false) : void
       {
          dispatchEvent(new Event(TYPING));
-         if(this.key.length == 0)
+         if(this.key.length == 0 || now)
          {
             this.announce();
             return;

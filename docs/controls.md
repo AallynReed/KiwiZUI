@@ -54,11 +54,11 @@ not report — `settle()` reports once, when the run of keys ends.
 | [`Slider`](../ui/Slider.as) | A number, dragged. No knob; the run of colour is the reading. One write per gesture. |
 | [`Stepper`](../ui/Stepper.as) | A number, stepped rather than dragged, for values worth setting exactly. Reads a zero as a word — `Auto`, `Off`. |
 | [`Spin`](../ui/Spin.as) | A number, stepped, nudged by the arrows, or typed straight in. A plain reading until it is clicked. |
-| [`Input`](../ui/Input.as) | A typed-into box with a hint behind it and a cross to empty it. |
+| [`Input`](../ui/Input.as) | A typed-into box with a hint behind it and a cross to put it back. `clears` is what the cross puts back, empty unless the caller says otherwise. |
 | [`Combo`](../ui/Combo.as) | One choice out of a list. |
 | [`Multi`](../ui/Multi.as) | Any number of choices out of a list. The literal is the values joined by commas, so the file stays editable by hand. |
 | [`List`](../ui/List.as) | Any number of values the player writes themselves, in a modal that adds, removes and reorders them. Commas again, so the file stays editable by hand. |
-| [`Picker`](../ui/Picker.as) | A colour, off a square and a hue strip. Opaque. |
+| [`Picker`](../ui/Picker.as) | A colour, off a square and a hue strip. Opaque. The cross in its hex box restores the shipped colour. |
 | [`AlphaPicker`](../ui/AlphaPicker.as) | The same with an opacity strip. Writes `#RRGGBBAA`, or `#RRGGBB` when fully opaque. |
 | [`Heading`](../ui/Heading.as) | A section title. Not a setting. |
 | [`Cat`](../ui/Cat.as) | A foldable category. Not a setting. |
