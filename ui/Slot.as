@@ -72,6 +72,8 @@ package ui
 
       public var hasRollOver:Boolean = false;
 
+      public var activates:Boolean = true;
+
       public var useLargeBitmaps:Boolean = false;
 
       private var itemName:String = "";
@@ -284,13 +286,19 @@ package ui
       public function activate() : void
       {
          this.selected = false;
-         ExternalInterface.call("POST_SOUND_EVENT","Play_ui_window_click_item");
-         ExternalInterface.call("SLOT.ACTIVATE",this.slotId);
+         if(IggyFunctions.inIggy)
+         {
+            ExternalInterface.call("POST_SOUND_EVENT","Play_ui_window_click_item");
+            ExternalInterface.call("SLOT.ACTIVATE",this.slotId);
+         }
       }
 
       public function hideTooltip() : void
       {
-         ExternalInterface.call("TOOLTIP.HIDE");
+         if(IggyFunctions.inIggy)
+         {
+            ExternalInterface.call("TOOLTIP.HIDE");
+         }
       }
 
       public function get iconImage() : String
@@ -587,7 +595,10 @@ package ui
 
       private function onClick(e:MouseEvent) : void
       {
-         this.activate();
+         if(this.activates)
+         {
+            this.activate();
+         }
       }
 
       private function onEnter(e:MouseEvent) : void
@@ -597,6 +608,10 @@ package ui
          this.newItem = false;
          var corner:Point = beside != null ? beside : localToGlobal(new Point(width,height));
          var top:Point = null;
+         if(!IggyFunctions.inIggy)
+         {
+            return;
+         }
          ExternalInterface.call("SLOT.POINTER_ENTER",this.slotId,corner.x,corner.y);
          if(this.tooltipName.length > 0 || this.tooltipDescription.length > 0)
          {
@@ -608,9 +623,12 @@ package ui
       private function onLeave(e:Event) : void
       {
          this.light(false);
-         ExternalInterface.call("TOOLTIP.HIDE");
-         ExternalInterface.call("SLOT.POINTER_LEAVE",this.slotId);
          this.selected = false;
+         if(IggyFunctions.inIggy)
+         {
+            ExternalInterface.call("TOOLTIP.HIDE");
+            ExternalInterface.call("SLOT.POINTER_LEAVE",this.slotId);
+         }
       }
    }
 }
