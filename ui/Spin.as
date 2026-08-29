@@ -1,5 +1,6 @@
 package ui
 {
+   import flash.events.Event;
    import flash.events.FocusEvent;
    import flash.events.KeyboardEvent;
    import flash.events.MouseEvent;
@@ -53,6 +54,7 @@ package ui
          this.held = low;
          this.readout = renderer.pin(renderer.label(0,0,12,TextFieldAutoSize.CENTER,"",READ,20,false,true),READ,12);
          this.readout.mouseEnabled = false;
+         this.readout.addEventListener(Event.CHANGE,this.onEdit);
          this.readout.addEventListener(KeyboardEvent.KEY_DOWN,this.onTyping);
          this.readout.addEventListener(FocusEvent.FOCUS_OUT,this.onBlur);
          addChild(this.readout);
@@ -91,6 +93,10 @@ package ui
 
       override public function settle() : void
       {
+         if(this.editing)
+         {
+            this.grab();
+         }
          if(this.value != this.held)
          {
             this.held = this.value;
@@ -159,6 +165,11 @@ package ui
          this.readout.setSelection(0,this.readout.length);
       }
 
+      private function onEdit(e:Event) : void
+      {
+         this.stir();
+      }
+
       private function onTyping(e:KeyboardEvent) : void
       {
          if(e.keyCode == Keyboard.ENTER || e.keyCode == Keyboard.ESCAPE)
@@ -180,10 +191,15 @@ package ui
          }
          if(take)
          {
-            this.value = Config.number(this.readout.text,this.low,this.top,this.value);
+            this.grab();
          }
          this.edit(false);
          this.settle();
+      }
+
+      private function grab() : void
+      {
+         this.value = Config.number(this.readout.text,this.low,this.top,this.value);
       }
 
       private function onDown(e:MouseEvent) : void

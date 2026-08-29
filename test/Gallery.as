@@ -192,6 +192,7 @@ package
          this.checkKeysDistinct();
          this.checkAccentPlacement();
          this.checkRoundTrip();
+         this.checkRestate();
          this.checkLayer();
          this.checkTip();
          this.say(this.failures == 0 ? "\nall " + (this.lines.length) + " checks passed"
@@ -773,6 +774,31 @@ package
                       "#" + Config.hex(shade));
             i++;
          }
+      }
+
+      private function restated(key:String) : String
+      {
+         return key == "scale" ? "100" : "#FF8800";
+      }
+
+      private function checkRestate() : void
+      {
+         var hub:Hub = new Hub("compass.swf","Zakros UI - Compass",this.restated,"Compass")
+            .readme("A band | a mark ~ a plate")
+            .option("scale",Hub.STEPPER,"Compass size","50,200,5,0,,%")
+            .option("accent",Hub.COLOR,"Centre mark");
+         var line:String = hub.declaration();
+         var next:String = Hub.restate(line,"scale","125");
+         var was:Object = Hub.parse(Hub.MARK + "compass",line);
+         var now:Object = Hub.parse(Hub.MARK + "compass",next);
+         this.same("a restated value is the new one",(now.options[0] as Object).value,"125");
+         this.same("the value beside it is untouched",(now.options[1] as Object).value,
+                   (was.options[1] as Object).value);
+         this.same("a restated line keeps its readme",now.readme,was.readme);
+         this.same("a restated line keeps its group",now.group,was.group);
+         this.same("a restated line keeps its parameters",(now.options[0] as Object).max,200);
+         this.same("a key that is not there restates nothing",Hub.restate(line,"none","1"),null);
+         this.same("a legacy line restates nothing",Hub.restate("{\"a\":1}","scale","1"),null);
       }
 
       private function checkPacked() : void

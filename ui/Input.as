@@ -260,7 +260,9 @@ package ui
          if(this.key.length == 0)
          {
             this.announce();
+            return;
          }
+         this.stir();
       }
 
       private function onApply(e:MouseEvent) : void
@@ -279,6 +281,11 @@ package ui
          {
             this.commit();
          }
+      }
+
+      override public function settle() : void
+      {
+         this.commit();
       }
 
       private function commit() : void

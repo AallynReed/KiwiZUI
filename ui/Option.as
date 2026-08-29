@@ -11,6 +11,7 @@ package ui
    import flash.external.ExternalInterface;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
+   import flash.utils.getTimer;
 
    public class Option extends Sprite
    {
@@ -28,6 +29,8 @@ package ui
       private static const MARK_DROP:int = 9;
 
       private static const HOLD_SHIFT:Number = 10;
+
+      private static const QUIET:int = 500;
 
       public static function watch(host:Stage, on:Boolean) : void
       {
@@ -62,7 +65,8 @@ package ui
 
       private static function onSettle(e:KeyboardEvent) : void
       {
-         if(focused != null)
+         var host:Stage = e.currentTarget as Stage;
+         if(focused != null && !(host.focus is TextField))
          {
             focused.settle();
          }
@@ -85,6 +89,8 @@ package ui
       private var tipMark:Shape = new Shape();
 
       public var anchor:Function;
+
+      private var due:int = 0;
 
       public function Option(key:String, text:String = "", w:int = 0)
       {
@@ -198,6 +204,22 @@ package ui
 
       public function settle() : void
       {
+      }
+
+      public function stir() : void
+      {
+         this.due = getTimer() + QUIET;
+         addEventListener(Event.ENTER_FRAME,this.onQuiet);
+      }
+
+      private function onQuiet(e:Event) : void
+      {
+         if(getTimer() < this.due)
+         {
+            return;
+         }
+         removeEventListener(Event.ENTER_FRAME,this.onQuiet);
+         this.settle();
       }
 
       private function onTouch(e:MouseEvent) : void

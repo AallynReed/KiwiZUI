@@ -68,6 +68,8 @@ package ui
 
       private var hot:Boolean = false;
 
+      private var sent:String = "";
+
       private var zone:Reach = new Reach();
 
       public function Picker(key:String, text:String, w:int)
@@ -107,12 +109,16 @@ package ui
       {
          var shade:uint = Config.color(raw,this.color);
          var a:Number = this.translucent ? Config.alpha(raw,this.opacity) : 1;
-         if(this.popup != null || (shade == this.color && a == this.opacity))
+         if(this.popup != null)
          {
             return;
          }
-         this.opacity = a;
-         this.take(shade);
+         if(shade != this.color || a != this.opacity)
+         {
+            this.opacity = a;
+            this.take(shade);
+         }
+         this.sent = this.literal;
       }
 
       private function take(shade:uint) : void
@@ -338,7 +344,7 @@ package ui
          this.release();
          if(was)
          {
-            this.commit();
+            this.settle();
          }
       }
 
@@ -377,6 +383,7 @@ package ui
          }
          this.color = renderer.hsv(this.hue,this.sat,this.val);
          this.refresh();
+         this.stir();
       }
 
       private function onHex(e:Event) : void
@@ -386,11 +393,20 @@ package ui
             this.opacity = Config.alpha(this.hex.value,this.opacity);
          }
          this.take(Config.color(this.hex.value,this.color));
-         this.commit();
+         this.settle();
+      }
+
+      override public function settle() : void
+      {
+         if(this.literal != this.sent)
+         {
+            this.commit();
+         }
       }
 
       private function commit() : void
       {
+         this.sent = this.literal;
          this.paint();
          this.announce();
          this.painted = -1;
@@ -400,6 +416,7 @@ package ui
 
       private function onClosed(e:Event) : void
       {
+         this.hex.settle();
          this.release();
          this.popup = null;
          this.field = null;

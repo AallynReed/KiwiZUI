@@ -5,6 +5,7 @@ package ui
    import flash.display.Shape;
    import flash.display.Sprite;
    import flash.events.Event;
+   import flash.events.FocusEvent;
    import flash.events.MouseEvent;
    import flash.geom.Point;
    import flash.geom.Rectangle;
@@ -43,6 +44,10 @@ package ui
       public var key:String = "";
 
       public var literal:String = "";
+
+      public var id:String = "";
+
+      public var line:String;
 
       private var mods:Object = {};
 
@@ -159,6 +164,7 @@ package ui
          this.panel.addEventListener(MouseEvent.MOUSE_WHEEL,this.onWheel);
          addEventListener(MouseEvent.CLICK,this.onSwallow);
          addEventListener(MouseEvent.MOUSE_WHEEL,this.onSwallow);
+         addEventListener(FocusEvent.FOCUS_OUT,this.onShut);
       }
 
       private function onSwallow(e:MouseEvent) : void
@@ -221,7 +227,7 @@ package ui
 
       private function restate() : void
       {
-         if(Layer.open)
+         if(Layer.open || this.typing)
          {
             this.stale = true;
             return;
@@ -229,9 +235,14 @@ package ui
          this.rebuild();
       }
 
+      private function get typing() : Boolean
+      {
+         return this.stage != null && this.stage.focus is TextField;
+      }
+
       private function onShut(e:Event) : void
       {
-         if(this.stale && !Layer.open)
+         if(this.stale && !Layer.open && !this.typing)
          {
             this.rebuild();
          }
@@ -318,6 +329,7 @@ package ui
       public function hide() : void
       {
          var i:int = 0;
+         this.flush();
          Layer.hide();
          Option.hideTip();
          Option.watch(this.stage,false);
@@ -411,10 +423,21 @@ package ui
          return out;
       }
 
+      private function flush() : void
+      {
+         var i:int = 0;
+         while(i < this.rows.length)
+         {
+            (this.rows[i] as Option).settle();
+            i++;
+         }
+      }
+
       private function strip() : void
       {
          var option:Option = null;
          var i:int = 0;
+         this.flush();
          while(i < this.rows.length)
          {
             option = this.rows[i] as Option;
@@ -817,6 +840,12 @@ package ui
          spec.value = this.literal;
          this.swf = String(record.swf);
          this.key = option.key;
+         this.id = String(record.id);
+         this.line = Hub.restate(String(record.raw),this.key,this.literal);
+         if(this.line != null)
+         {
+            record.raw = this.line;
+         }
          dispatchEvent(new Event(Event.CHANGE));
          this.paintRows();
       }

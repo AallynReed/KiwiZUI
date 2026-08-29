@@ -171,6 +171,52 @@ package
          ExternalInterface.call("UIComponent.OnSaveConfig",swf,key,value);
       }
 
+      public static function restate(raw:String, key:String, value:String) : String
+      {
+         var field:Array = null;
+         var parts:Array = cut(raw,"|");
+         var era:int = int(parts[0]);
+         var head:int = era < 2 ? 3 : (era < 3 ? 4 : 5);
+         var out:String = String(parts[0]);
+         var found:Boolean = false;
+         var i:int = 1;
+         if(era < 1 || parts.length <= head)
+         {
+            return null;
+         }
+         while(i < parts.length)
+         {
+            if(i < head)
+            {
+               out += "|" + esc(String(parts[i]));
+            }
+            else
+            {
+               field = cut(String(parts[i]),"~");
+               if(field.length >= 4 && String(field[0]) == key)
+               {
+                  field[3] = value;
+                  found = true;
+               }
+               out += "|" + rejoin(field);
+            }
+            i++;
+         }
+         return found ? out : null;
+      }
+
+      private static function rejoin(field:Array) : String
+      {
+         var out:String = esc(String(field[0]));
+         var i:int = 1;
+         while(i < field.length)
+         {
+            out += "~" + esc(String(field[i]));
+            i++;
+         }
+         return out;
+      }
+
       public function declaration() : String
       {
          var row:Array = null;

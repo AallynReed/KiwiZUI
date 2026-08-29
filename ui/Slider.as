@@ -185,6 +185,7 @@ package ui
          var at:Number = this.low - this.stop + steps * this.step;
          this.value = at < this.low ? 0 : Config.clamp(at,this.low,this.top,this.value);
          this.paint();
+         this.stir();
       }
    }
 }
