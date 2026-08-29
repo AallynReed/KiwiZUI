@@ -32,36 +32,6 @@ package
          return utc - 11 * 3600000;
       }
 
-      public static function summerTime(utc:Number) : Boolean
-      {
-         var when:Date = null;
-         var last:int = 0;
-         var past:Boolean = false;
-         if(!real(utc))
-         {
-            return false;
-         }
-         try
-         {
-            when = new Date(utc);
-         }
-         catch(e:Error)
-         {
-            return false;
-         }
-         if(when.month < 2 || when.month > 9)
-         {
-            return false;
-         }
-         if(when.month > 2 && when.month < 9)
-         {
-            return true;
-         }
-         last = 31 - (Math.floor(utc / 86400000) + 4 + 31 - when.date) % 7;
-         past = when.date > last || when.date == last && when.hours >= 1;
-         return when.month == 2 ? past : !past;
-      }
-
       public static function weekday(utc:Number) : int
       {
          var day:Number = 86400000;
@@ -156,15 +126,18 @@ package
          return short ? "$Time_Localized2_short" : "$Time_Localized2";
       }
 
-      public static function wall(twelve:Boolean = false, shift:Number = 0) : String
+      public static function serverWall(twelve:Boolean = false,
+                                        seconds:Boolean = false) : String
       {
-         return stamp(now(),twelve,shift);
+         var ms:Number = now();
+         return real(ms) ? face(trove(ms),twelve,seconds) : "";
       }
 
-      public static function stamp(utc:Number, twelve:Boolean = false,
-                                   shift:Number = 0) : String
+      public static function local(utc:Number, shift:Number, summer:Boolean,
+                                   twelve:Boolean, seconds:Boolean) : String
       {
          var when:Date = null;
+         var h:int = 0;
          if(!real(utc))
          {
             return "";
@@ -177,52 +150,35 @@ package
          {
             return "";
          }
-         return face(utc + (shift == 0 ? localOffset(when) : shift * 3600000),twelve);
+         h = (when.hours + shift
+            + (summer && when.month > 2 && when.month < 10 ? 1 : 0)) % 24;
+         if(h < 0)
+         {
+            h += 24;
+         }
+         return dial(h,when.minutes,when.seconds,twelve,seconds);
       }
 
-      public static function serverWall(twelve:Boolean = false) : String
+      private static function face(ms:Number, twelve:Boolean, seconds:Boolean) : String
       {
-         var ms:Number = now();
-         return real(ms) ? face(trove(ms),twelve) : "";
+         var secs:int = Math.floor(ms / 1000) % 86400;
+         if(secs < 0)
+         {
+            secs += 86400;
+         }
+         return dial(secs / 3600,secs % 3600 / 60,secs % 60,twelve,seconds);
       }
 
-      private static function face(ms:Number, twelve:Boolean) : String
+      private static function dial(h:int, m:int, s:int, twelve:Boolean,
+                                   seconds:Boolean) : String
       {
-         var mins:int = Math.floor(ms / 60000) % 1440;
-         var h:int = 0;
-         if(mins < 0)
+         var tail:String = "";
+         if(twelve)
          {
-            mins += 1440;
+            tail = h < 12 ? " AM" : " PM";
+            h = h % 12 == 0 ? 12 : h % 12;
          }
-         h = mins / 60;
-         if(!twelve)
-         {
-            return pad(h) + ":" + pad(mins % 60);
-         }
-         return String(h % 12 == 0 ? 12 : h % 12) + ":" + pad(mins % 60)
-              + (h < 12 ? " AM" : " PM");
-      }
-
-      public static function localOffset(when:Date) : Number
-      {
-         var made:Date = null;
-         var offset:Number = Number.NaN;
-         try
-         {
-            made = new Date(when.fullYearUTC,when.monthUTC,when.dateUTC,12,0,0);
-            offset = Date.UTC(when.fullYearUTC,when.monthUTC,when.dateUTC,12,0,0)
-                   - made.time;
-         }
-         catch(e:Error)
-         {
-            offset = Number.NaN;
-         }
-         if(!isNaN(offset) && offset != 0)
-         {
-            return offset;
-         }
-         offset = -Number(when.timezoneOffset) * 60000;
-         return isNaN(offset) ? 0 : offset;
+         return pad(h) + ":" + pad(m) + (seconds ? ":" + pad(s) : "") + tail;
       }
 
       private static function pad(value:int) : String
