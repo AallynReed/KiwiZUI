@@ -29,6 +29,8 @@ package ui
 
       public var anchored:Boolean = false;
 
+      public var bare:Boolean = false;
+
       public var key:String = "";
 
       public var literal:String = "";
@@ -82,9 +84,18 @@ package ui
          this.listen();
       }
 
+      public function set title(text:String) : void
+      {
+         renderer.say(this.titleText,text);
+      }
+
       private function accented(options:Array) : Array
       {
          var out:Array = options.concat();
+         if(this.bare)
+         {
+            return out;
+         }
          var at:int = out.length;
          var i:int = 0;
          while(i < out.length)
