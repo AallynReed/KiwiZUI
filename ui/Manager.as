@@ -65,7 +65,7 @@ package ui
 
       private var pickClip:Sprite = new Sprite();
 
-      private var pickRail:Shape = new Shape();
+      private var pickRail:Scrollbar = new Scrollbar();
 
       private var search:Input = new Input("","",LEFT - PAD * 2,
                                           IggyFunctions.translate("$Marketplace_SearchButton"));
@@ -80,7 +80,7 @@ package ui
 
       private var body:Sprite = new Sprite();
 
-      private var rail:Shape = new Shape();
+      private var rail:Scrollbar = new Scrollbar();
 
       private var titleField:TextField;
 
@@ -155,13 +155,16 @@ package ui
          this.pickClip.addChild(this.picks);
          this.pickClip.y = HEAD + PAD + FIND;
          this.panel.addChild(this.pickClip);
-         this.panel.addChild(this.pickRail);
          this.clip.addChild(this.body);
          this.clip.x = LEFT + PAD;
          this.clip.y = HEAD + PAD;
          this.panel.addChild(this.clip);
-         this.panel.addChild(this.rail);
+         this.pickRail.attach(this.panel);
+         this.pickRail.moved = this.slidePicks;
+         this.rail.attach(this.panel);
+         this.rail.moved = this.slide;
          this.panel.addEventListener(MouseEvent.MOUSE_WHEEL,this.onWheel);
+         this.panel.addEventListener(MouseEvent.MOUSE_DOWN,this.onRailDown);
          addEventListener(MouseEvent.CLICK,this.onSwallow);
          addEventListener(MouseEvent.MOUSE_WHEEL,this.onSwallow);
          addEventListener(FocusEvent.FOCUS_OUT,this.onShut);
@@ -330,6 +333,8 @@ package ui
       {
          var i:int = 0;
          this.flush();
+         this.rail.release();
+         this.pickRail.release();
          Layer.hide();
          Option.hideTip();
          Option.watch(this.stage,false);
@@ -665,22 +670,18 @@ package ui
       private function clipPicks() : void
       {
          var view:int = this.picksView;
-         var run:int = 0;
          this.pickScroll = Config.clamp(this.pickScroll,0,
                                         Math.max(0,this.picksDeep - view),0);
          this.pickClip.scrollRect = new Rectangle(0,this.pickScroll,LEFT,view);
-         this.pickRail.graphics.clear();
-         if(this.picksDeep <= view)
-         {
-            return;
-         }
-         run = Math.max(20,view * view / this.picksDeep);
-         this.pickRail.x = LEFT - 5;
+         this.pickRail.x = LEFT - Scrollbar.W;
          this.pickRail.y = HEAD + PAD + FIND;
-         renderer.fill(this.pickRail,0,0,3,view,renderer.HEADER,1);
-         renderer.fill(this.pickRail,0,
-                       this.pickScroll * (view - run) / (this.picksDeep - view),
-                       3,run,renderer.BORDER,1);
+         this.pickRail.fit(view,this.picksDeep,this.pickScroll);
+      }
+
+      private function slidePicks(where:Number) : void
+      {
+         this.pickScroll = where;
+         this.clipPicks();
       }
 
       private function wrapName(face:TextField, name:String) : void
@@ -704,7 +705,6 @@ package ui
          var option:Option = null;
          var at:int = 0;
          var i:int = 0;
-         var view:int = this.view;
          this.readField.visible = this.told;
          if(this.told)
          {
@@ -714,10 +714,7 @@ package ui
             renderer.say(this.readField,this.story);
             this.readField.height = this.readField.textHeight + 8;
             this.readField.textColor = renderer.VALUE;
-            this.scroll = Config.clamp(this.scroll,0,
-                                       Math.max(0,this.readField.height - view),0);
-            this.clip.scrollRect = new Rectangle(0,this.scroll,this.inner,view);
-            this.paintRail(view);
+            this.slide(this.scroll);
             return;
          }
          this.emptyField.visible = this.rows.length == 0;
@@ -743,24 +740,17 @@ package ui
             (this.rows[i] as Option).paint();
             i++;
          }
-         this.scroll = Config.clamp(this.scroll,0,Math.max(0,this.content - view),0);
-         this.clip.scrollRect = new Rectangle(0,this.scroll,this.inner,view);
-         this.paintRail(view);
+         this.slide(this.scroll);
       }
 
-      private function paintRail(view:int) : void
+      private function slide(where:Number) : void
       {
-         var run:int = Math.max(20,view * view / this.content);
-         this.rail.graphics.clear();
-         if(this.content <= view)
-         {
-            return;
-         }
-         this.rail.x = this.span - 8;
+         var view:int = this.view;
+         this.scroll = Config.clamp(where,0,Math.max(0,this.content - view),0);
+         this.clip.scrollRect = new Rectangle(0,this.scroll,this.inner,view);
+         this.rail.x = this.span - Scrollbar.W;
          this.rail.y = HEAD + PAD;
-         renderer.fill(this.rail,0,0,3,view,renderer.HEADER,1);
-         renderer.fill(this.rail,0,this.scroll * (view - run) / (this.content - view),
-                       3,run,renderer.BORDER,1);
+         this.rail.fit(view,this.content,this.scroll);
       }
 
       private function onRead(e:MouseEvent) : void
@@ -801,25 +791,19 @@ package ui
 
       private function onWheel(e:MouseEvent) : void
       {
-         var was:Number = 0;
          if(this.panel.mouseX < LEFT)
          {
-            was = this.pickScroll;
-            this.pickScroll = Config.clamp(this.pickScroll + renderer.wheel(e),0,
-                                           Math.max(0,this.picksDeep - this.picksView),0);
-            if(this.pickScroll != was)
-            {
-               this.clipPicks();
-            }
+            this.slidePicks(this.pickScroll + renderer.wheel(e));
             return;
          }
-         was = this.scroll;
-         this.scroll = Config.clamp(this.scroll + renderer.wheel(e),0,
-                                    Math.max(0,this.content - this.view),0);
-         if(this.scroll != was)
-         {
-            this.paintRows();
-         }
+         this.slide(this.scroll + renderer.wheel(e));
+      }
+
+      private function onRailDown(e:MouseEvent) : void
+      {
+         var at:Point = new Point(this.panel.mouseX,this.panel.mouseY);
+         this.pickRail.press(at);
+         this.rail.press(at);
       }
 
       private function onChange(e:Event) : void
@@ -904,8 +888,11 @@ package ui
 
       private function onHeadHover(e:MouseEvent) : void
       {
-         var live:Boolean = this.panel.mouseY < HEAD;
-         this.search.lit(new Point(this.panel.mouseX,this.panel.mouseY));
+         var at:Point = new Point(this.panel.mouseX,this.panel.mouseY);
+         var live:Boolean = at.y < HEAD;
+         this.search.lit(at);
+         this.pickRail.hover(at);
+         this.rail.hover(at);
          var closeHot:Boolean = live && this.holds(this.closeBtn);
          var readHot:Boolean = live && this.readBtn.visible && this.holds(this.readBtn);
          var asideHot:Boolean = live && this.asideBtn.visible && this.holds(this.asideBtn);
