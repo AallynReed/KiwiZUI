@@ -100,6 +100,33 @@ own key after a moment looks like tidiness and is not: a shut screen is fed noth
 its window opens, so the message is waiting in the file, and unwriting it destroys it.
 Whoever acts on it writes it off. Nobody else.
 
+**An instruction that can fail is held.** Writing it off on arrival is right for one that
+is carried out where it lands, and wrong for one that has to reach somewhere first: the
+tome swap is told the bar is full, cannot get to the tomes, and the message it needed has
+already been written off. `api.holds(key)` leaves the key standing and `api.spent(key)` is
+the screen saying it is done. Nothing else changes: an instruction still standing is still
+in the file, so it is read again the next time that window opens and again next session,
+which is what retrying means on this channel.
+
+A held command usually wants `atOnce` as well. The quiet window exists to keep a stale key
+in the load burst from being read as a caller, and a held key in the load burst is not
+stale - it is the thing that did not get done.
+
+## Asking in NavAPI's shape
+
+NavAPI takes the screen name as the *key* and a flag as the value, where we take one key
+and the screen name as the value. Our navigation menu accepts both; NavAPI accepts only
+its own, so a request written in NavAPI's shape reaches either and a request written in
+ours reaches one.
+
+```actionscript
+this.api.ask("navigationmenu.swf", "collections");
+```
+
+`ask` clears the flag, raises it on the next beat and puts it back down after 250 ms. All
+three parts are needed: a raise over a raise is not a message, and a raise left standing
+is a window opening on every frame for the rest of the session.
+
 ## One shot, never a flag
 
 An instruction is acted on as it arrives and nothing is kept. A caller that wants a
