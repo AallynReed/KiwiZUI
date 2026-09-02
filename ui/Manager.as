@@ -566,7 +566,7 @@ package ui
          renderer.fill(this.panelBox,0,0,this.span,this.high,renderer.PANEL,1);
          renderer.fill(this.panelBox,0,0,this.span,HEAD,renderer.HEADER,1);
          renderer.fill(this.panelBox,0,HEAD,this.span,1,renderer.CYAN,0.85);
-         renderer.fill(this.panelBox,LEFT,HEAD + 1,1,this.high - HEAD - 1,renderer.BORDER,1);
+         renderer.fill(this.panelBox,LEFT,HEAD + 1,1,this.high - HEAD - 1,renderer.BORDER,0.5);
          renderer.border(this.panelBox,0,0,this.span,this.high,renderer.ROW);
 
          this.titleField.textColor = renderer.VALUE;
