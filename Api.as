@@ -14,11 +14,15 @@ package
 
       public static const SPENT:String = "done";
 
+      public static const GONE:String = "false";
+
       private static const QUIET:int = 600;
 
       private static const LATEST:int = 4000;
 
       private static const EARS:int = 8;
+
+      private static const HOLD:int = 250;
 
       private var section:String;
 
@@ -42,6 +46,8 @@ package
 
       private var saying:Array = [];
 
+      private var later:Array = [];
+
       public function Api(section:String)
       {
          super();
@@ -51,9 +57,30 @@ package
 
       public function command(key:String, run:Function, atOnce:Boolean = false) : Api
       {
-         this.runs[key.toLowerCase()] = {"run":run,"now":atOnce};
+         this.runs[key.toLowerCase()] = {"run":run,"now":atOnce,"held":false};
          Config.always(key);
          return this;
+      }
+
+      public function holds(key:String) : Api
+      {
+         var command:Object = this.runs[key.toLowerCase()];
+         if(command != null)
+         {
+            command.held = true;
+         }
+         return this;
+      }
+
+      public function spent(key:String) : void
+      {
+         var at:String = key.toLowerCase();
+         if(this.runs[at] == null || this.used.indexOf(at) >= 0)
+         {
+            return;
+         }
+         this.used.push(at);
+         this.wake();
       }
 
       public function watch(screen:DisplayObject) : void
@@ -86,7 +113,7 @@ package
          if(this.live || command.now == true)
          {
             (command.run as Function)(value,key);
-            if(value != SPENT)
+            if(value != SPENT && command.held != true)
             {
                this.used.push(key);
                this.wake();
@@ -139,6 +166,14 @@ package
       {
          write(swf,key,SPENT);
          this.saying.push([swf,key,value]);
+         this.wake();
+      }
+
+      public function ask(swf:String, key:String) : void
+      {
+         write(swf,key,GONE);
+         this.saying.push([swf,key,Config.PRESENT]);
+         this.later.push([swf,key,GONE,getTimer() + HOLD]);
          this.wake();
       }
 
@@ -197,7 +232,21 @@ package
             i++;
          }
          this.saying.length = 0;
-         if(this.live && this.screen != null)
+         i = 0;
+         while(i < this.later.length)
+         {
+            said = this.later[i] as Array;
+            if(getTimer() < int(said[3]))
+            {
+               i++;
+            }
+            else
+            {
+               write(String(said[0]),String(said[1]),String(said[2]));
+               this.later.splice(i,1);
+            }
+         }
+         if(this.live && this.screen != null && this.later.length == 0)
          {
             this.screen.removeEventListener(Event.ENTER_FRAME,this.onFrame);
          }
