@@ -28,6 +28,8 @@ package ui
 
       public var icon:Icon;
 
+      public var markSize:int = 0;
+
       public var driven:Boolean = false;
 
       public var on:Boolean = false;
@@ -88,8 +90,15 @@ package ui
             this.icon = new Icon(size);
          }
          this.icon.show(texture,size);
+         this.markSize = 0;
          this.setMark(this.icon);
          return this.icon.visible;
+      }
+
+      public function setIconArt(art:DisplayObject, size:int) : void
+      {
+         this.markSize = size;
+         this.setMark(art);
       }
 
       public function setMark(art:DisplayObject) : void
@@ -113,6 +122,8 @@ package ui
       {
          var span:Number = 0;
          var left:Number = 0;
+         var wide:Number = 0;
+         var deep:Number = 0;
          if(this.mark2 == null || !this.mark2.visible)
          {
             this.caption.autoSize = TextFieldAutoSize.NONE;
@@ -120,12 +131,14 @@ package ui
             this.caption.x = 0;
             return;
          }
+         wide = this.markSize > 0 ? this.markSize : this.mark2.width;
+         deep = this.markSize > 0 ? this.markSize : this.mark2.height;
          this.caption.autoSize = TextFieldAutoSize.LEFT;
-         span = this.mark2.width + ICON_GAP + this.caption.textWidth;
+         span = wide + ICON_GAP + this.caption.textWidth;
          left = (this.w - span) / 2;
          this.mark2.x = left;
-         this.mark2.y = (this.h - this.mark2.height) / 2;
-         this.caption.x = left + this.mark2.width + ICON_GAP;
+         this.mark2.y = (this.h - deep) / 2;
+         this.caption.x = left + wide + ICON_GAP;
       }
 
       public function paint() : void
