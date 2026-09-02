@@ -171,10 +171,20 @@ package
 
       public function ask(swf:String, key:String) : void
       {
+         this.raise(swf,key);
+         this.later.push([swf,key,GONE,getTimer() + HOLD]);
+      }
+
+      public function raise(swf:String, key:String) : void
+      {
          write(swf,key,GONE);
          this.saying.push([swf,key,Config.PRESENT]);
-         this.later.push([swf,key,GONE,getTimer() + HOLD]);
          this.wake();
+      }
+
+      public function drop(swf:String, key:String) : void
+      {
+         write(swf,key,GONE);
       }
 
       private function onListen(value:String, key:String) : void
