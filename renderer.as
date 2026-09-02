@@ -36,6 +36,8 @@ package
 
       public static var RAISED2:uint = 0x0F101216;
 
+      public static var SLOT:uint = 0x0F101216;
+
       public static var RAISED3:uint = 0x0F101216;
 
       public static var RAISED4:uint = 0x0F101216;
@@ -136,12 +138,12 @@ package
          "accent":"CYAN", "red":"RED", "danger":"DANGER", "orange":"ORANGE",
          "yellow":"YELLOW", "green":"GREEN", "purple":"PURPLE",
          "water":"WATER", "air":"AIR", "fire":"FIRE", "cosmic":"COSMIC",
-         "statlight":"LIGHT"
+         "statlight":"LIGHT", "slot":"SLOT"
       };
 
       private static const STEPS:Object = {
          "PANEL2":0, "RAISED6":0, "RAISED":0.018,
-         "RAISED2":0.028, "RAISED3":0.028, "RAISED4":0.028,
+         "RAISED2":0.028, "RAISED3":0.028, "RAISED4":0.028, "SLOT":0.028,
          "RAISED5":0.049, "HEADER":0.049,
          "ROW":0.229, "BORDER":0.229
       };
@@ -151,6 +153,8 @@ package
                                         "statlight","outline","outlinecolor"];
 
       private static const STOCK:Object = {};
+
+      private static var slotOwn:Boolean = false;
 
       public function renderer()
       {
@@ -183,6 +187,12 @@ package
          {
             return false;
          }
+         if(field == "SLOT" && Config.blank(raw))
+         {
+            slotOwn = false;
+            derive();
+            return true;
+         }
          var c:uint = uint(Math.round((1 - Config.alpha(raw,1)) * 255)) << 24
                     | Config.color(raw,VALUE);
          switch(field)
@@ -202,6 +212,7 @@ package
             case "FIRE":    FIRE = c;    break;
             case "COSMIC":  COSMIC = c;  break;
             case "LIGHT":   LIGHT = c;   break;
+            case "SLOT":    SLOT = c; slotOwn = true; break;
             default: return false;
          }
          return true;
@@ -225,6 +236,7 @@ package
             case "HEADER":  HEADER = c;  break;
             case "RAISED":  RAISED = c;  break;
             case "RAISED2": RAISED2 = c; break;
+            case "SLOT":    if(!slotOwn) { SLOT = c; } break;
             case "RAISED3": RAISED3 = c; break;
             case "RAISED4": RAISED4 = c; break;
             case "RAISED5": RAISED5 = c; break;
@@ -243,6 +255,7 @@ package
             case "HEADER":  return HEADER;
             case "RAISED":  return RAISED;
             case "RAISED2": return RAISED2;
+            case "SLOT":    return SLOT;
             case "RAISED3": return RAISED3;
             case "RAISED4": return RAISED4;
             case "RAISED5": return RAISED5;

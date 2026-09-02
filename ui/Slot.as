@@ -108,23 +108,21 @@ package ui
 
       private var positional:Boolean = true;
 
+      private var rim:int = -1;
+
       public function Slot(size:int = 52, edge:int = -1, positional:Boolean = true)
       {
          super();
          this.size = size;
          this.positional = positional;
+         this.rim = edge;
          this.body.mouseEnabled = false;
          this.body.mouseChildren = false;
          addChild(this.body);
          this.body.addChild(this.edging);
-         renderer.framed(this.edging,0,0,size,size,renderer.RAISED2,
-                         edge != -1 ? uint(edge) : renderer.PANEL);
          this.body.addChild(this.frame);
          this.body.addChild(this.strike);
-         renderer.fill(this.strike,-1.5,-(size >> 1) + 2,3,size - 4,renderer.RED,0.8);
          this.strike.rotation = 35;
-         this.strike.x = size >> 1;
-         this.strike.y = size >> 1;
          this.strike.visible = false;
          this.image = new ObjectPreview(size - 8,size - 8);
          this.image.x = 4;
@@ -132,11 +130,9 @@ package ui
          this.image.mouseEnabled = false;
          this.image.loadedCallback = this.onPreviewLoaded;
          this.body.addChild(this.image);
-         this.tally = renderer.label(0,TALLY_PAD,size >= 56 ? 15 : (size >= 40 ? 12 : 10),
-                                     TextFieldAutoSize.RIGHT," ",size,30,false,true);
-         renderer.stamp(this.tally,[renderer.SHADE]);
-         this.body.addChild(this.tally);
          this.body.addChild(this.pips);
+         this.dress();
+         this.count();
          addEventListener(MouseEvent.MOUSE_DOWN,this.onPress);
          addEventListener(MouseEvent.CLICK,this.onClick);
          addEventListener(MouseEvent.MOUSE_OVER,this.onEnter);
@@ -261,6 +257,55 @@ package ui
       public function setSlotSize(span:Number) : void
       {
          this.image.resize(span - 8,span - 8);
+      }
+
+      private function dress() : void
+      {
+         var span:int = this.size;
+         this.edging.graphics.clear();
+         renderer.framed(this.edging,0,0,span,span,renderer.SLOT,
+                         this.rim != -1 ? uint(this.rim) : renderer.PANEL);
+         this.strike.graphics.clear();
+         renderer.fill(this.strike,-1.5,-(span >> 1) + 2,3,span - 4,renderer.RED,0.8);
+         this.strike.x = span >> 1;
+         this.strike.y = span >> 1;
+      }
+
+      public function restyle() : void
+      {
+         this.dress();
+         this.paint();
+      }
+
+      private function count() : void
+      {
+         var span:int = this.size;
+         var on:Boolean = this.tally == null || this.tally.visible;
+         if(this.tally != null)
+         {
+            this.body.removeChild(this.tally);
+         }
+         this.tally = renderer.label(0,TALLY_PAD,span >= 56 ? 15 : (span >= 40 ? 12 : 10),
+                                     TextFieldAutoSize.RIGHT," ",span,30,false,true);
+         renderer.stamp(this.tally,[renderer.SHADE]);
+         this.tally.visible = on;
+         this.body.addChildAt(this.tally,this.body.getChildIndex(this.pips));
+         this.retally();
+      }
+
+      public function resize(span:int) : void
+      {
+         if(this.size == span)
+         {
+            return;
+         }
+         this.size = span;
+         this.dress();
+         this.image.resize(span - 8,span - 8);
+         this.count();
+         this.setQuality(this.pipCount);
+         this.selected = false;
+         this.paint();
       }
 
       public function setRarityScale(scale:Number) : void
@@ -503,16 +548,16 @@ package ui
             {
                renderer.fill(this.frame,0,0,span,span,uint(edge));
             }
-            renderer.fill(this.frame,1,1,span - 2,span - 2,renderer.RAISED2);
+            renderer.fill(this.frame,1,1,span - 2,span - 2,renderer.SLOT);
             if(this.rank >= STELLAR)
             {
                renderer.triband(this.frame,2,2,span - 4,span - 4,0x8913B9,0xB622D9,0x1C97C3);
-               renderer.fill(this.frame,3,3,span - 6,span - 6,renderer.RAISED2);
+               renderer.fill(this.frame,3,3,span - 6,span - 6,renderer.SLOT);
             }
             else if(this.rank == RADIANT)
             {
                renderer.fill(this.frame,2,2,span - 4,span - 4,0x95E6CB);
-               renderer.fill(this.frame,3,3,span - 6,span - 6,renderer.RAISED2);
+               renderer.fill(this.frame,3,3,span - 6,span - 6,renderer.SLOT);
             }
          }
          if(this.mark != 0)
@@ -544,7 +589,7 @@ package ui
          if(this.positional && this.rank > 0 && STYLEABLE[Number(this.slotId)] != null)
          {
             renderer.noEntry(this.frame,span >> 1,span >> 1,span * 0.27,
-                             renderer.LABEL,renderer.RAISED2,0.85);
+                             renderer.LABEL,renderer.SLOT,0.85);
             return;
          }
          renderer.dashed(this.frame,0,0,span,span,renderer.BORDER,0.7);

@@ -268,6 +268,11 @@ package
          return text;
       }
 
+      public static function blank(raw:String) : Boolean
+      {
+         return digits(raw).length == 0;
+      }
+
       public static function color(raw:String, fallback:uint) : uint
       {
          var text:String = digits(raw);
