@@ -62,6 +62,8 @@ package ui
          addChild(this.plus);
          this.minus.text = "-";
          this.plus.text = "+";
+         this.minus.repeats = true;
+         this.plus.repeats = true;
          this.minus.addEventListener(MouseEvent.CLICK,this.onDown);
          this.plus.addEventListener(MouseEvent.CLICK,this.onUp);
          addEventListener(MouseEvent.CLICK,this.onClick);

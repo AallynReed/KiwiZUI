@@ -3,16 +3,27 @@ package ui
    import flash.display.DisplayObject;
    import flash.display.Shape;
    import flash.display.Sprite;
+   import flash.display.Stage;
+   import flash.events.Event;
    import flash.events.MouseEvent;
    import flash.external.ExternalInterface;
    import flash.geom.Point;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
+   import flash.utils.getTimer;
 
    public class Plate extends Sprite
    {
 
       private static const ICON_GAP:int = 6;
+
+      private static const FIRST:int = 400;
+
+      private static const AGAIN:int = 110;
+
+      private static const FAST:int = 40;
+
+      private static const RAMP:int = 8;
 
       public var caption:TextField;
 
@@ -42,11 +53,21 @@ package ui
 
       public var bare:Boolean = false;
 
+      public var repeats:Boolean = false;
+
       private var w:int;
 
       private var h:int;
 
       private var hot:Boolean = false;
+
+      private var watch:Stage;
+
+      private var due:int = 0;
+
+      private var ticks:int = 0;
+
+      private var mine:Boolean = false;
 
       public function Plate(w:int, h:int, size:int)
       {
@@ -62,6 +83,7 @@ package ui
          addEventListener(MouseEvent.ROLL_OVER,this.onHover);
          addEventListener(MouseEvent.ROLL_OUT,this.onHover);
          addEventListener(MouseEvent.MOUSE_DOWN,this.onPress);
+         addEventListener(MouseEvent.CLICK,this.onTap,false,1);
       }
 
       public function resize(w:int, h:int) : void
@@ -219,6 +241,67 @@ package ui
          if(!this.driven)
          {
             Option.click(this.live);
+         }
+         if(!this.repeats || !this.live)
+         {
+            return;
+         }
+         this.ticks = 0;
+         this.due = getTimer() + FIRST;
+         this.tick();
+         addEventListener(Event.ENTER_FRAME,this.onHeld);
+         this.watch = stage;
+         if(this.watch != null)
+         {
+            this.watch.addEventListener(MouseEvent.MOUSE_UP,this.onLift);
+            this.watch.addEventListener(Event.MOUSE_LEAVE,this.onLift);
+         }
+      }
+
+      private function onHeld(e:Event) : void
+      {
+         if(!this.live)
+         {
+            this.lift();
+            return;
+         }
+         if(getTimer() < this.due)
+         {
+            return;
+         }
+         this.ticks++;
+         this.due = getTimer() + (this.ticks < RAMP ? AGAIN : FAST);
+         this.tick();
+      }
+
+      private function onLift(e:Event) : void
+      {
+         this.lift();
+      }
+
+      private function lift() : void
+      {
+         removeEventListener(Event.ENTER_FRAME,this.onHeld);
+         if(this.watch != null)
+         {
+            this.watch.removeEventListener(MouseEvent.MOUSE_UP,this.onLift);
+            this.watch.removeEventListener(Event.MOUSE_LEAVE,this.onLift);
+            this.watch = null;
+         }
+      }
+
+      private function tick() : void
+      {
+         this.mine = true;
+         dispatchEvent(new MouseEvent(MouseEvent.CLICK));
+         this.mine = false;
+      }
+
+      private function onTap(e:MouseEvent) : void
+      {
+         if(this.repeats && !this.mine)
+         {
+            e.stopImmediatePropagation();
          }
       }
    }

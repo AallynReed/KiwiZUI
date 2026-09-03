@@ -24,10 +24,6 @@ package ui
 
       private static const HOLD_CTRL:Number = 5;
 
-      private static const MARK:Number = 2.5;
-
-      private static const MARK_DROP:int = 9;
-
       private static const HOLD_SHIFT:Number = 10;
 
       private static const QUIET:int = 500;
@@ -86,8 +82,6 @@ package ui
 
       public var tip:String = "";
 
-      private var tipMark:Shape = new Shape();
-
       public var anchor:Function;
 
       private var due:int = 0;
@@ -98,7 +92,6 @@ package ui
          this.key = key;
          this.w = w;
          addChild(this.box);
-         addChild(this.tipMark);
          addEventListener(MouseEvent.MOUSE_DOWN,this.onTouch);
          addEventListener(MouseEvent.ROLL_OVER,this.onTipIn);
          addEventListener(MouseEvent.ROLL_OUT,this.onTipOut);
@@ -111,7 +104,6 @@ package ui
 
       public function captionAt(x:int, color:uint) : void
       {
-         this.tipMark.graphics.clear();
          if(this.caption == null)
          {
             return;
@@ -119,11 +111,6 @@ package ui
          this.caption.x = x;
          renderer.centre(this.caption,0,this.tall);
          this.caption.textColor = color;
-         if(this.tip.length > 0)
-         {
-            renderer.pip(this.tipMark,x + this.caption.textWidth + 8,
-                         this.caption.y + MARK_DROP,MARK,renderer.LABEL,0.8);
-         }
       }
 
       private function onTipIn(e:MouseEvent) : void
