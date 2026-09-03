@@ -294,7 +294,10 @@ package ui
          this.paintPlane();
          this.paintBar();
          this.paintMarks();
-         this.hex.value = this.literal;
+         if(!this.hex.editing)
+         {
+            this.hex.value = this.literal;
+         }
          this.hex.paint();
          this.paint();
       }
@@ -400,6 +403,10 @@ package ui
 
       private function onHex(e:Event) : void
       {
+         if(!Config.full(this.hex.value))
+         {
+            return;
+         }
          if(this.translucent)
          {
             this.opacity = Config.alpha(this.hex.value,this.opacity);

@@ -1,5 +1,6 @@
 package ui
 {
+   import flash.display.Stage;
    import flash.events.Event;
    import flash.events.FocusEvent;
    import flash.events.KeyboardEvent;
@@ -79,6 +80,32 @@ package ui
          f.mouseEnabled = false;
          f.height = this.size * 2;
          return f;
+      }
+
+      public static function paste(host:Stage) : void
+      {
+         var box:Input = Find.ancestorOf(host == null ? null : host.focus,Input) as Input;
+         if(box != null)
+         {
+            box.pasted();
+         }
+      }
+
+      public function pasted() : void
+      {
+         addEventListener(Event.ENTER_FRAME,this.onPasted);
+      }
+
+      private function onPasted(e:Event) : void
+      {
+         removeEventListener(Event.ENTER_FRAME,this.onPasted);
+         this.paint();
+         this.report();
+      }
+
+      public function get editing() : Boolean
+      {
+         return stage != null && stage.focus == this.field;
       }
 
       public function get boxTop() : int

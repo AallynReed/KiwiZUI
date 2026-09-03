@@ -273,6 +273,12 @@ package
          return digits(raw).length == 0;
       }
 
+      public static function full(raw:String) : Boolean
+      {
+         var text:String = digits(raw);
+         return text.length == 6 || text.length == 8;
+      }
+
       public static function color(raw:String, fallback:uint) : uint
       {
          var text:String = digits(raw);
