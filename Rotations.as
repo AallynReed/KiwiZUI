@@ -34,6 +34,46 @@ package
                                                   "$CollectionName_JurassicJungle",
                                                   "$CollectionName_Giantlands"];
 
+      public static const D15_ONE:Array = ["$Objective_Giantlands",
+                                           "$Objective_CeriseSandsea",
+                                           "$Objective_DeepForest",
+                                           "Alkali Flats",
+                                           "$Objective_DeadofWinter",
+                                           "$Objective_Giantlands",
+                                           "Firefly Party",
+                                           "$Objective_DesertofSecrets",
+                                           "Weathered Wastelands",
+                                           "$Objective_FrozenWastes",
+                                           "$Objective_FriggasFjord",
+                                           "$Objective_AbandonedBoneyard"];
+
+      public static const D15_TWO:Array = ["$Objective_CursedVale",
+                                           "$Objective_HollowDunes",
+                                           "$Objective_BewitchingWood",
+                                           "$Objective_PrimalPreserve",
+                                           "$Objective_HollowDunes",
+                                           "$Objective_ForbiddenSpires",
+                                           "Viking Burial Grounds",
+                                           "$Objective_SpellboundThicket",
+                                           "$Objective_SaurianSwamp",
+                                           "$Objective_ForbiddenMountains",
+                                           "$Objective_UncannyValley"];
+
+      public static const D15_THREE:Array = ["Sugar Steppes",
+                                             "$Objective_VolcanicFields",
+                                             "$Objective_TheLostIsles",
+                                             "$Objective_NeonCity_Luminopolis",
+                                             "$Objective_TheLostIsles",
+                                             "$Objective_BlazingEmberlands",
+                                             "Cocoa Craters",
+                                             "Data Spires",
+                                             "$Objective_TheLostIsles",
+                                             "Cupcake Canyon",
+                                             "$Objective_DragonsTeeth",
+                                             "$Objective_NeonCity_Luminopolis",
+                                             "$Objective_TheLostIsles",
+                                             "Data Spires"];
+
       public function Rotations()
       {
          super();
@@ -178,6 +218,49 @@ package
             }
             i++;
          }
+         return answer;
+      }
+
+      public static function biomes(utc:Number) : Object
+      {
+         var span:Number = 10800000;
+         var first:Number = 1718708400000;
+         var into:Number = (utc - first) % span;
+         var k:Number = floorDiv(utc - first,span);
+         if(into < 0)
+         {
+            into += span;
+         }
+         return state(true,span - into,
+                      [D15_ONE[wrap(k,D15_ONE.length)],
+                       D15_TWO[wrap(k,D15_TWO.length)],
+                       D15_THREE[wrap(k,D15_THREE.length)]]);
+      }
+
+      public static function gardening(utc:Number, days:int) : Object
+      {
+         var day:Number = 86400000;
+         var first:Number = 1747998000000;
+         var span:Number = days * day;
+         var start:Number = first + floorDiv(utc - first,span) * span + (days - 1) * day;
+         var on:Boolean = start <= utc;
+         return state(on,on ? start + day - utc : start - utc,[]);
+      }
+
+      public static function fastTrial(utc:Number) : Object
+      {
+         var cycle:Number = 97200000;
+         var window:Number = 10800000;
+         var epoch:Number = 1760094000000;
+         var k:Number = floorDiv(utc - epoch,cycle);
+         var start:Number = epoch + k * cycle;
+         var answer:Object = null;
+         if(start + window <= utc)
+         {
+            start += cycle;
+         }
+         answer = state(start <= utc,start <= utc ? start + window - utc : start - utc,[]);
+         answer.at = start;
          return answer;
       }
 
