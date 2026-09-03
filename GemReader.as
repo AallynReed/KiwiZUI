@@ -3,6 +3,12 @@ package
    public class GemReader
    {
 
+      public static const DAMAGE:int = 0;
+
+      public static const CRIT:int = 1;
+
+      public static const LIGHT:int = 5;
+
       private static const GAIN:Array = [3,5,7,9];
 
       private static const CAP_LEVEL:Array = [23,25,30,35];
@@ -163,6 +169,11 @@ package
       public function boostsAt(i:int) : int
       {
          return int(boosts[i]);
+      }
+
+      public function columnAt(i:int) : int
+      {
+         return int(columns[i]);
       }
 
       public function percentAt(i:int) : String
