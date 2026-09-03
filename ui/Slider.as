@@ -18,23 +18,25 @@ package ui
 
       private static const RUN:int = TRACK - 2;
 
-      public var value:Number = 0;
-
-      private var low:Number;
-
-      private var top:Number;
-
-      private var step:Number;
-
-      private var places:int;
-
-      private var zero:String;
-
-      private var suffix:String;
-
-      private var readout:TextField;
+      public var live:Boolean = false;
 
       private var held:Number = 0;
+
+      private var _value:Number = 0;
+
+      protected var low:Number;
+
+      protected var top:Number;
+
+      protected var step:Number;
+
+      protected var places:int;
+
+      protected var zero:String;
+
+      protected var suffix:String;
+
+      private var readout:TextField;
 
       private var dragging:Boolean = false;
 
@@ -58,6 +60,24 @@ package ui
          addEventListener(MouseEvent.ROLL_OVER,this.onHover);
          addEventListener(MouseEvent.ROLL_OUT,this.onHover);
          addEventListener(MouseEvent.MOUSE_DOWN,this.onPress);
+      }
+
+      public function get value() : Number
+      {
+         return this._value;
+      }
+
+      public function set value(at:Number) : void
+      {
+         if(at == this._value)
+         {
+            return;
+         }
+         this._value = at;
+         if(this.readout != null)
+         {
+            this.paint();
+         }
       }
 
       override public function get literal() : String
@@ -99,6 +119,21 @@ package ui
          }
       }
 
+      protected function get reading() : String
+      {
+         return this.zero.length > 0 && this.value == 0 ? this.zero
+              : this.literal + this.suffix;
+      }
+
+      public function range(low:Number, top:Number, step:Number) : void
+      {
+         this.low = low;
+         this.top = top;
+         this.step = step > 0 ? step : this.step;
+         this.value = Config.clamp(this.value,low,top,low);
+         this.held = this.value;
+      }
+
       private function get stop() : Number
       {
          return this.zero.length > 0 && this.low > 0 ? this.step : 0;
@@ -134,9 +169,7 @@ package ui
          this.captionAt(0,renderer.LABEL);
          this.readout.x = this.w - READ;
          renderer.centre(this.readout,0,this.tall);
-         this.readout.text = this.zero.length > 0 && this.value == 0
-                           ? this.zero
-                           : this.literal + this.suffix;
+         this.readout.text = this.reading;
          this.readout.textColor = live ? renderer.CYAN : renderer.VALUE;
       }
 
@@ -185,6 +218,11 @@ package ui
          var at:Number = this.low - this.stop + steps * this.step;
          this.value = at < this.low ? 0 : Config.clamp(at,this.low,this.top,this.value);
          this.paint();
+         if(this.live)
+         {
+            this.settle();
+            return;
+         }
          this.stir();
       }
    }
