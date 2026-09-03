@@ -22,6 +22,8 @@ package
 
       private static const EDGE:Number = 1e-9;
 
+      private static const PROGRESS_SLACK:Number = 0.05;
+
       private static const BANDS:Array = [
          [[[14,85,113],[0.2,85,113],[0.02,85,113],[0.5,85,113],[50,85,113],[1,85,113]],
           [[14,113,150],[0.2,113,150],[0.02,113,150],[0.5,113,150],[50,113,150],[1,113,150]]],
@@ -66,6 +68,8 @@ package
       private var rolls:Array = [];
 
       private var fitErr:Number = 0;
+
+      private var fitMiss:Number = 0;
 
       private var prLow:Number = 0;
 
@@ -275,6 +279,9 @@ package
          var found:Boolean = false;
          var bestErr:Number = 0;
          var bestBad:Boolean = false;
+         var loose:Boolean = false;
+         var looseMiss:Number = 0;
+         var looseErr:Number = 0;
          _solved = false;
          if(n < 2 || _level <= 0 || _tier < 0 || rank <= 0)
          {
@@ -311,6 +318,14 @@ package
                            keep(socket,want);
                         }
                      }
+                     else if(!found && (!loose || fitMiss < looseMiss
+                          || (fitMiss == looseMiss && fitErr < looseErr)))
+                     {
+                        loose = true;
+                        looseMiss = fitMiss;
+                        looseErr = fitErr;
+                        keep(socket,want);
+                     }
                      a++;
                   }
                   b++;
@@ -319,12 +334,12 @@ package
             }
             s++;
          }
-         if(!found)
+         if(!found && !loose)
          {
             return false;
          }
          refineRolls();
-         _starved = attainable < 3;
+         _starved = found && attainable < 3;
          _quality = ranked();
          if(_quality < 0)
          {
@@ -365,19 +380,25 @@ package
          var i:int = 0;
          var give:Number = 0;
          var roll:Number = 0;
+         var over:Number = 0;
          var bound:Number = slack;
          var guess:Number = base;
          var containers:int = 0;
+         var fits:Boolean = true;
          var n:int = columns.length;
          fitRolls.length = 0;
+         fitMiss = 0;
          while(i < n)
          {
             containers = int(want[i]) + 1;
             give = Number(giveNum[i]) / (Number(wide[i]) * containers);
             roll = (Number(lead[i]) / containers - Number(low[i])) / Number(wide[i]);
-            if(roll < -2 * give - EDGE || roll > 1 + give + EDGE)
+            over = roll < 0 ? -roll : (roll > 1 ? roll - 1 : 0);
+            fitMiss += over * over;
+            if(roll < -PROGRESS_SLACK - 2 * give - EDGE
+            || roll > 1 + PROGRESS_SLACK + give + EDGE)
             {
-               return false;
+               fits = false;
             }
             roll = roll < 0 ? 0 : (roll > 1 ? 1 : roll);
             fitRolls.push(roll);
@@ -386,7 +407,7 @@ package
             i++;
          }
          fitErr = Math.abs(guess - rank);
-         return fitErr <= bound;
+         return fits && fitErr <= bound;
       }
 
       private function keep(socket:int, want:Array) : void
