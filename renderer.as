@@ -619,6 +619,28 @@ package
          return target;
       }
 
+      public static function bin(target:*, x:Number, y:Number, w:Number, h:Number,
+                                 color:uint, opacity:Number = 1) : *
+      {
+         var edge:Number = Math.max(1.5,w * 0.11);
+         var lid:Number = Math.max(2,h * 0.13);
+         var top:Number = y + lid * 2 + edge;
+         var body:Number = y + h - top - edge;
+         var i:int = 0;
+         fill(target,x + w * 0.32,y,w * 0.36,lid,color,opacity);
+         fill(target,x,y + lid,w,lid,color,opacity);
+         fill(target,x + edge,top,edge,body,color,opacity);
+         fill(target,x + w - edge * 2,top,edge,body,color,opacity);
+         fill(target,x + edge,y + h - edge,w - edge * 2,edge,color,opacity);
+         while(i < 2)
+         {
+            fill(target,x + w / 2 - edge / 2 + (i * 2 - 1) * w * 0.16,top + 2,
+                 edge,body - 4,color,opacity);
+            i++;
+         }
+         return target;
+      }
+
       public static function heart(target:*, cx:Number, cy:Number, w:int, h:int, color:uint, solid:Boolean = false, opacity:Number = 1) : *
       {
          var up:Number = w / 4;
