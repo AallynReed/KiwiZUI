@@ -94,7 +94,22 @@ package ui
 
       public function get summary() : String
       {
-         return String(this.labels[this.index]);
+         return this.index < 0 || this.index >= this.labels.length ? ""
+              : String(this.labels[this.index]);
+      }
+
+      public function choose(i:int) : void
+      {
+         this.index = Config.clamp(i,0,Math.max(0,this.values.length - 1),0);
+         this.held = this.index;
+         this.paint();
+      }
+
+      public function reset(values:Array, labels:Array = null) : void
+      {
+         this.values = values;
+         this.labels = labels == null ? values : labels;
+         this.choose(0);
       }
 
       public function marked(i:int) : Boolean
