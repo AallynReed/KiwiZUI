@@ -34,6 +34,12 @@ package ui
 
       public var driven:Boolean = false;
 
+      /** A quiet chip draws its body at alpha 0, which is a fill that was never drawn, so
+       *  the press goes through it to whatever is behind. A chip that is a button on its
+       *  own - rather than one row of a strip the container resolves - has to have a
+       *  middle to be pressed in. */
+      public var solid:Boolean = false;
+
       private var box:Shape = new Shape();
 
       private var live:Boolean = true;
@@ -137,7 +143,7 @@ package ui
          var lit:Boolean = on || hot;
          var edge:uint = hot ? renderer.lift(renderer.BORDER,EDGE_LIFT) : renderer.BORDER;
          var body:uint = renderer.RAISED5;
-         var fill:Number = on ? 1 : 0;
+         var fill:Number = on || this.solid ? 1 : 0;
          var word:uint = lit ? renderer.VALUE : renderer.LABEL;
          var accent:uint = 0;
          if(this.tone == ACCENT || this.tone == GO)

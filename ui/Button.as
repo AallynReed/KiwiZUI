@@ -15,7 +15,7 @@ package ui
 
       public static const LATCH:int = 1;
 
-      private static const REST:Number = 0.9;
+      public static const REST:Number = 0.9;
 
       private static const RIM:Number = 0.08;
 
