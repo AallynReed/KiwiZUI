@@ -521,7 +521,7 @@ package ui
          }
       }
 
-      private static function frameFor(rarity:int) : int
+      public static function frameFor(rarity:int) : int
       {
          if(rarity <= 0) { return 0; }
          if(rarity <= 5) { return int(PLAIN[rarity]); }
