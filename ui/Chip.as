@@ -40,6 +40,10 @@ package ui
        *  middle to be pressed in. */
       public var solid:Boolean = false;
 
+      public var mark:Function = null;
+
+      public var face:Shape = new Shape();
+
       private var box:Shape = new Shape();
 
       private var live:Boolean = true;
@@ -56,6 +60,7 @@ package ui
          this.tone = tone;
          mouseChildren = false;
          addChild(this.box);
+         addChild(this.face);
          this.caption = renderer.pin(
             renderer.label(0,0,size,TextFieldAutoSize.CENTER,"",w,h,false,false,tracking(size)),w,size);
          addChild(this.caption);
@@ -164,6 +169,11 @@ package ui
          renderer.border(this.box,0,0,this.w,this.h,edge,1);
          this.caption.textColor = word;
          this.count.textColor = renderer.sink(word,70);
+         this.face.graphics.clear();
+         if(this.mark != null)
+         {
+            this.mark(this);
+         }
          this.alpha = this.live ? 1 : 0.45;
          this.place();
       }

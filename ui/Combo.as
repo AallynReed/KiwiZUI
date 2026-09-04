@@ -3,8 +3,10 @@ package ui
    import flash.display.Sprite;
    import flash.events.Event;
    import flash.events.MouseEvent;
+   import flash.external.ExternalInterface;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
+   import flash.text.TextFieldType;
    import flash.ui.Keyboard;
 
    public class Combo extends Option
@@ -20,6 +22,8 @@ package ui
 
       private static const ARROW_H:int = 5;
 
+      private static const HUNT:int = 24;
+
       public var index:int = 0;
 
       public var values:Array;
@@ -28,11 +32,24 @@ package ui
 
       public var boxes:Boolean = false;
 
+      /** Asked for, never assumed. A field that takes the keyboard is a field that takes
+       *  it from the game, so a list only gets one where the screen says it is long enough
+       *  to be worth that. */
+      public var hunts:Boolean = false;
+
       private var face:TextField;
 
       private var menu:Sprite;
 
       private var slots:Array = [];
+
+      private var rows:Array = [];
+
+      private var find:TextField;
+
+      private var hint:TextField;
+
+      private var query:String = "";
 
       private var hover:int = -1;
 
@@ -159,6 +176,21 @@ package ui
          return Math.min(PAGE,this.values.length);
       }
 
+      public function get searchable() : Boolean
+      {
+         return this.hunts && this.values.length > PAGE;
+      }
+
+      private function get lid() : int
+      {
+         return this.searchable ? HUNT : 0;
+      }
+
+      private function get open() : int
+      {
+         return Math.min(this.slots.length,this.rows.length);
+      }
+
       private function onHover(e:MouseEvent) : void
       {
          this.hot = e.type == MouseEvent.ROLL_OVER;
@@ -175,6 +207,10 @@ package ui
          Option.click();
          this.build();
          Layer.show(this.menu,this,this.lane,(this.tall - BOX) / 2 + BOX + 1);
+         if(this.find != null && stage != null)
+         {
+            stage.focus = this.find;
+         }
          this.paint();
       }
 
@@ -183,10 +219,10 @@ package ui
          var field:TextField = null;
          var i:int = 0;
          this.menu = new Sprite();
-         this.menu.mouseChildren = false;
+         this.menu.mouseChildren = this.searchable;
          this.menuW = this.menuWide;
          this.slots = [];
-         this.first = Config.clamp(this.index - (this.page >> 1),0,this.values.length - this.page,0);
+         this.query = "";
          while(i < this.page)
          {
             field = renderer.pin(renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",
@@ -195,6 +231,13 @@ package ui
             this.menu.addChild(field);
             i++;
          }
+         if(this.searchable)
+         {
+            this.hunt();
+         }
+         this.sift();
+         this.first = Config.clamp(this.index - (this.page >> 1),0,
+                                   Math.max(0,this.rows.length - this.page),0);
          this.menu.addEventListener(MouseEvent.MOUSE_MOVE,this.onTrack);
          this.menu.addEventListener(MouseEvent.ROLL_OUT,this.onLeave);
          this.menu.addEventListener(MouseEvent.MOUSE_WHEEL,this.onWheel);
@@ -204,56 +247,128 @@ package ui
          this.repaintMenu();
       }
 
+      /** A list longer than a page gets a field to narrow it with. The field is the
+       *  search: Iggy routes the keyboard at a focused TextField and nowhere else, so a
+       *  box the player clicks into is the only kind that can be typed in at all. */
+      private function hunt() : void
+      {
+         this.hint = this.line(this.menuW - 18);
+         renderer.say(this.hint,"Type to search");
+         this.menu.addChild(this.hint);
+         this.find = this.line(this.menuW - 18);
+         this.find.type = TextFieldType.INPUT;
+         this.find.selectable = true;
+         this.find.mouseEnabled = true;
+         this.find.addEventListener(Event.CHANGE,this.onHunt);
+         this.menu.addChild(this.find);
+      }
+
+      private function line(wide:int) : TextField
+      {
+         return renderer.pin(renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",wide,20),wide,12);
+      }
+
+      private function onHunt(e:Event) : void
+      {
+         this.query = this.find.text;
+         this.first = 0;
+         this.hover = -1;
+         this.sift();
+         this.repaintMenu();
+      }
+
+      private function sift() : void
+      {
+         var want:String = this.query.toLowerCase();
+         var i:int = 0;
+         this.rows = [];
+         while(i < this.values.length)
+         {
+            if(want.length == 0 || String(this.labels[i]).toLowerCase().indexOf(want) >= 0)
+            {
+               this.rows.push(i);
+            }
+            i++;
+         }
+         this.first = Config.clamp(this.first,0,Math.max(0,this.rows.length - this.page),0);
+      }
+
       public function repaintMenu() : void
       {
          var field:TextField = null;
          var row:int = 0;
+         var top:int = 0;
          var i:int = 0;
-         var deep:int = this.page * ROW + 2;
+         var live:int = this.open;
+         var deep:int = this.lid + live * ROW + 2;
          if(this.menu == null)
          {
             return;
          }
          this.menu.graphics.clear();
          renderer.framed(this.menu,0,0,this.menuW,deep,renderer.PANEL,renderer.CYAN,1);
-         while(i < this.page)
+         if(this.searchable)
          {
-            row = this.first + i;
+            this.paintHunt();
+         }
+         while(i < this.slots.length)
+         {
             field = this.slots[i] as TextField;
-            if(row == this.hover)
+            field.visible = i < live;
+            if(field.visible)
             {
-               renderer.fill(this.menu,1,1 + i * ROW,this.menuW - 2,ROW,renderer.HEADER,1);
-            }
-            if(this.boxes)
-            {
-               renderer.framed(this.menu,9,6 + i * ROW,11,11,renderer.HEADER,
-                               this.marked(row) ? renderer.CYAN : renderer.BORDER,1);
-               if(this.marked(row))
+               row = int(this.rows[this.first + i]);
+               top = this.lid + 1 + i * ROW;
+               if(row == this.hover)
                {
-                  renderer.accent(this.menu,11,8 + i * ROW,7,7);
+                  renderer.fill(this.menu,1,top,this.menuW - 2,ROW,renderer.HEADER,1);
                }
+               if(this.boxes)
+               {
+                  renderer.framed(this.menu,9,top + 5,11,11,renderer.HEADER,
+                                  this.marked(row) ? renderer.CYAN : renderer.BORDER,1);
+                  if(this.marked(row))
+                  {
+                     renderer.accent(this.menu,11,top + 7,7,7);
+                  }
+               }
+               field.x = this.boxes ? 26 : 9;
+               renderer.centre(field,top,ROW);
+               renderer.say(field,String(this.labels[row]));
+               renderer.elide(field,field.width);
+               field.textColor = this.marked(row) ? renderer.CYAN
+                               : row == this.hover ? renderer.VALUE : renderer.LABEL;
             }
-            field.x = this.boxes ? 26 : 9;
-            renderer.centre(field,1 + i * ROW,ROW);
-            renderer.say(field,String(this.labels[row]));
-            renderer.elide(field,field.width);
-            field.textColor = this.marked(row) ? renderer.CYAN
-                            : row == this.hover ? renderer.VALUE : renderer.LABEL;
             i++;
          }
          this.rail(deep);
       }
 
+      private function paintHunt() : void
+      {
+         renderer.fill(this.menu,1,1,this.menuW - 2,HUNT - 1,renderer.HEADER,1);
+         renderer.fill(this.menu,1,HUNT,this.menuW - 2,1,renderer.BORDER,1);
+         this.find.x = 9;
+         this.hint.x = 9;
+         renderer.centre(this.find,1,HUNT);
+         renderer.centre(this.hint,1,HUNT);
+         this.find.textColor = renderer.VALUE;
+         this.hint.textColor = renderer.LABEL;
+         this.hint.visible = this.find.text.length == 0;
+      }
+
       private function rail(deep:int) : void
       {
-         var span:int = deep - 2;
-         if(this.values.length <= this.page)
+         var live:int = this.open;
+         var span:int = deep - 2 - this.lid;
+         if(live == 0 || this.rows.length <= live)
          {
             return;
          }
-         renderer.fill(this.menu,this.menuW - 4,1,3,span,renderer.HEADER,1);
-         renderer.fill(this.menu,this.menuW - 4,1 + span * this.first / this.values.length,
-                       3,Math.max(8,span * this.page / this.values.length),renderer.BORDER,1);
+         renderer.fill(this.menu,this.menuW - 4,1 + this.lid,3,span,renderer.HEADER,1);
+         renderer.fill(this.menu,this.menuW - 4,
+                       1 + this.lid + span * this.first / this.rows.length,
+                       3,Math.max(8,span * live / this.rows.length),renderer.LABEL,1);
       }
 
       public function get menuWide() : int
@@ -282,8 +397,9 @@ package ui
       private function onTrack(e:MouseEvent) : void
       {
          var was:int = this.hover;
-         var slot:int = int((this.menu.mouseY - 1) / ROW);
-         this.hover = slot < 0 || slot >= this.page ? -1 : this.first + slot;
+         var slot:int = int((this.menu.mouseY - 1 - this.lid) / ROW);
+         this.hover = this.menu.mouseY < this.lid || slot < 0 || slot >= this.open
+                    ? -1 : int(this.rows[this.first + slot]);
          if(this.hover != was)
          {
             this.repaintMenu();
@@ -300,7 +416,7 @@ package ui
       {
          var was:int = this.first;
          this.first = Config.clamp(this.first + renderer.wheel(e,3),0,
-                                   this.values.length - this.page,this.first);
+                                   Math.max(0,this.rows.length - this.open),this.first);
          if(this.first != was)
          {
             this.onTrack(e);
@@ -310,6 +426,10 @@ package ui
 
       private function onPick(e:MouseEvent) : void
       {
+         if(this.menu.mouseY < this.lid)
+         {
+            return;
+         }
          if(this.hover >= 0 && this.hover < this.values.length)
          {
             Option.click();
@@ -317,10 +437,24 @@ package ui
          }
       }
 
+      /** The field is taken off the display list with the menu, and a field that had the
+       *  keyboard has to hand it back or the engine keeps sending keys at a box nobody
+       *  can see. */
       private function onClosed(e:Event) : void
       {
+         if(this.find != null && stage != null && stage.focus == this.find)
+         {
+            stage.focus = null;
+            if(IggyFunctions.inIggy)
+            {
+               ExternalInterface.call("UIComponent.OnTextfieldFocusOut");
+            }
+         }
          this.menu = null;
+         this.find = null;
+         this.hint = null;
          this.slots = [];
+         this.rows = [];
          this.paint();
       }
    }

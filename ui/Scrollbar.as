@@ -83,7 +83,7 @@ package ui
          renderer.fill(this.box,0,0,W,view,renderer.PANEL,0);
          renderer.fill(this.box,(W - MARK) / 2,0,MARK,view,renderer.HEADER);
          renderer.fill(this.box,(W - MARK) / 2,this.top,MARK,this.run,
-                       this.lit || this.held ? renderer.CYAN : renderer.BORDER);
+                       this.lit || this.held ? renderer.CYAN : renderer.LABEL);
          if(this.parent == null && this.home != null)
          {
             this.home.addChild(this);

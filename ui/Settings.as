@@ -31,6 +31,8 @@ package ui
 
       public var bare:Boolean = false;
 
+      public var sticky:Boolean = false;
+
       public var key:String = "";
 
       public var literal:String = "";
@@ -303,7 +305,7 @@ package ui
          this.rail.y = HEAD + PAD;
          renderer.fill(this.rail,0,0,3,view,renderer.HEADER,1);
          renderer.fill(this.rail,0,this.scroll * (view - run) / (this.content - view),
-                       3,run,renderer.BORDER,1);
+                       3,run,renderer.LABEL,1);
       }
 
       private function onWheel(e:MouseEvent) : void
@@ -334,7 +336,7 @@ package ui
       private function onOutside(e:MouseEvent) : void
       {
          var hit:DisplayObject = e.target as DisplayObject;
-         if(hit != null && this.panel.contains(hit))
+         if(this.sticky || hit == null || hit.stage == null || this.panel.contains(hit))
          {
             return;
          }

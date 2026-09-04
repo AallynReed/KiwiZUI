@@ -608,6 +608,17 @@ package
          }
       }
 
+      public static function tri(target:*, x:int, y:int, w:int, h:int, color:uint,
+                                 up:Boolean = false) : *
+      {
+         target.graphics.beginFill(color & 0xFFFFFF,solidity(color));
+         target.graphics.moveTo(x,up ? y + h : y);
+         target.graphics.lineTo(x + w,up ? y + h : y);
+         target.graphics.lineTo(x + (w >> 1),up ? y : y + h);
+         target.graphics.endFill();
+         return target;
+      }
+
       public static function gear(target:*, x:int = 7, y:int = 8, color:uint = 0) : *
       {
          var i:int = 0;

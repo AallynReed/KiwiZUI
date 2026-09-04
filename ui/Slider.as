@@ -12,11 +12,9 @@ package ui
 
       private static const GAP:int = 6;
 
-      private static const TRACK:int = CTRL - READ - GAP;
-
       private static const THICK:int = 7;
 
-      private static const RUN:int = TRACK - 2;
+      private var read:int = READ;
 
       public var live:Boolean = false;
 
@@ -54,12 +52,36 @@ package ui
          this.suffix = suffix;
          this.value = low;
          this.held = low;
-         this.readout = renderer.pin(renderer.label(0,0,12,TextFieldAutoSize.RIGHT,"",READ,20,false,true),READ,12);
+         this.read = this.widest();
+         this.readout = renderer.pin(renderer.label(0,0,12,TextFieldAutoSize.RIGHT,"",
+                                                    this.read,20,false,true),this.read,12);
          addChild(this.readout);
          mouseChildren = false;
          addEventListener(MouseEvent.ROLL_OVER,this.onHover);
          addEventListener(MouseEvent.ROLL_OUT,this.onHover);
          addEventListener(MouseEvent.MOUSE_DOWN,this.onPress);
+      }
+
+      private function widest() : int
+      {
+         var probe:TextField = renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",-1,-1,false,true);
+         var most:Number = 0;
+         var i:int = 0;
+         var words:Array = [this.zero,this.wording(this.low),this.wording(this.top)];
+         while(i < words.length)
+         {
+            renderer.say(probe,String(words[i]));
+            most = Math.max(most,probe.textWidth);
+            i++;
+         }
+         return Math.max(READ,Math.ceil(most) + 8);
+      }
+
+      private function wording(at:Number) : String
+      {
+         var scale:Number = Math.pow(10,this.places);
+         var rounded:Number = Math.round(at * scale) / scale;
+         return (this.places == 0 ? String(int(rounded)) : String(rounded)) + this.suffix;
       }
 
       public function get value() : Number
@@ -134,6 +156,16 @@ package ui
          this.held = this.value;
       }
 
+      private function get bar() : int
+      {
+         return CTRL - this.read - GAP;
+      }
+
+      private function get slide() : int
+      {
+         return this.bar - 2;
+      }
+
       private function get stop() : Number
       {
          return this.zero.length > 0 && this.low > 0 ? this.step : 0;
@@ -156,18 +188,18 @@ package ui
       override public function paint() : void
       {
          var mid:int = (this.tall - THICK) / 2;
-         var run:int = this.fraction * RUN;
+         var run:int = this.fraction * this.slide;
          var live:Boolean = this.hot || this.dragging || this.keyed;
          this.box.graphics.clear();
          renderer.fill(this.box,0,0,this.w,this.tall,renderer.PANEL,0);
-         renderer.framed(this.box,this.lane,mid,TRACK,THICK,renderer.HEADER,
+         renderer.framed(this.box,this.lane,mid,this.bar,THICK,renderer.HEADER,
                          live ? renderer.CYAN : renderer.BORDER,1);
          if(run > 0)
          {
             renderer.accent(this.box,this.lane + 1,mid + 1,run,THICK - 2);
          }
          this.captionAt(0,renderer.LABEL);
-         this.readout.x = this.w - READ;
+         this.readout.x = this.w - this.read;
          renderer.centre(this.readout,0,this.tall);
          this.readout.text = this.reading;
          this.readout.textColor = live ? renderer.CYAN : renderer.VALUE;
@@ -213,7 +245,7 @@ package ui
 
       private function follow() : void
       {
-         var along:Number = Config.clamp((this.mouseX - this.lane - 1) / RUN,0,1,0);
+         var along:Number = Config.clamp((this.mouseX - this.lane - 1) / this.slide,0,1,0);
          var steps:Number = Math.round(along * this.run / this.step);
          var at:Number = this.low - this.stop + steps * this.step;
          this.value = at < this.low ? 0 : Config.clamp(at,this.low,this.top,this.value);
