@@ -84,6 +84,12 @@ package ui
 
       public var anchor:Function;
 
+      /** A row that holds more than one control resolves them itself, from a point the
+       *  panel hands it. Iggy decides which object a press landed on by what it drew, and
+       *  a strip of small controls is exactly where that answer is wrong - the press goes
+       *  through to the neighbour and the row fires the wrong thing. */
+      public var hovers:Boolean = false;
+
       private var due:int = 0;
 
       public function Option(key:String, text:String = "", w:int = 0)
@@ -269,6 +275,15 @@ package ui
       }
 
       public function set from(raw:String) : void
+      {
+      }
+
+      public function press(at:Point) : Boolean
+      {
+         return false;
+      }
+
+      public function lit(at:Point) : void
       {
       }
 

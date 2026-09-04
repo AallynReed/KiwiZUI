@@ -6,6 +6,7 @@ package ui
    import flash.display.Sprite;
    import flash.events.Event;
    import flash.events.MouseEvent;
+   import flash.geom.Point;
    import flash.geom.Rectangle;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
@@ -62,6 +63,12 @@ package ui
       private var top:int = 0;
 
       private var scroll:Number = 0;
+
+      private var drives:Boolean = false;
+
+      private var pointer:Point = new Point();
+
+      private var here:Point = new Point();
 
       public function Settings(span:int, high:int, options:Array)
       {
@@ -148,10 +155,15 @@ package ui
          host.addChild(this);
          this.paint();
          Option.watch(this.stage,true);
+         if(this.drives)
+         {
+            addEventListener(Event.ENTER_FRAME,this.onTick);
+         }
       }
 
       public function hide() : void
       {
+         removeEventListener(Event.ENTER_FRAME,this.onTick);
          Layer.hide();
          Option.watch(this.stage,false);
          if(this.parent != null)
@@ -181,9 +193,11 @@ package ui
       {
          var option:Option = null;
          var i:int = 0;
+         this.drives = false;
          while(i < this.options.length)
          {
             option = this.options[i] as Option;
+            this.drives = this.drives || option.hovers;
             option.addEventListener(Event.CHANGE,this.onChange);
             option.addEventListener(Event.SELECT,this.onFold);
             option.reflow();
@@ -333,9 +347,64 @@ package ui
          this.hide();
       }
 
+      /** The pointer in one row's own coordinates. `clip` carries the scroll in its
+       *  `scrollRect`, and a scrollRect is not a transform: a point taken through anything
+       *  under it comes back short by the whole scroll, so the row is hit correctly and
+       *  every control on it is dead. The panel is the last thing above it, which makes it
+       *  the last honest reading. */
+      private function into(row:Option, at:Point) : Point
+      {
+         this.pointer.x = at.x - this.clip.x;
+         this.pointer.y = at.y - this.clip.y - row.y + this.scroll;
+         return this.pointer;
+      }
+
+      private function reach(row:Option) : Boolean
+      {
+         return row.hovers && row.visible;
+      }
+
+      private function claimed(e:MouseEvent) : Boolean
+      {
+         var option:Option = null;
+         var at:Point = this.panel.globalToLocal(new Point(e.stageX,e.stageY));
+         var i:int = 0;
+         while(i < this.options.length)
+         {
+            option = this.options[i] as Option;
+            if(this.reach(option) && option.press(this.into(option,at)))
+            {
+               return true;
+            }
+            i++;
+         }
+         return false;
+      }
+
+      private function onTick(e:Event) : void
+      {
+         var option:Option = null;
+         var i:int = 0;
+         this.here.x = this.panel.mouseX;
+         this.here.y = this.panel.mouseY;
+         while(i < this.options.length)
+         {
+            option = this.options[i] as Option;
+            if(this.reach(option))
+            {
+               option.lit(this.into(option,this.here));
+            }
+            i++;
+         }
+      }
+
       private function onOutside(e:MouseEvent) : void
       {
          var hit:DisplayObject = e.target as DisplayObject;
+         if(this.claimed(e))
+         {
+            return;
+         }
          if(this.sticky || hit == null || hit.stage == null || this.panel.contains(hit))
          {
             return;

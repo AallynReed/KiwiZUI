@@ -220,7 +220,7 @@ package ui
          this.box.graphics.lineStyle();
       }
 
-      public function press(at:Point) : Boolean
+      override public function press(at:Point) : Boolean
       {
          var edge:Number = this.x + this.boxAt + this.boxWide;
          if(!Hit.holds(this,this.boxAt + this.boxWide,this.tall,at))
@@ -246,7 +246,7 @@ package ui
          this.field.setSelection(this.field.text.length,this.field.text.length);
       }
 
-      public function lit(at:Point) : void
+      override public function lit(at:Point) : void
       {
          this.hovered = Hit.holds(this,this.boxAt + this.boxWide,this.tall,at);
       }
