@@ -95,11 +95,17 @@ package ui
          {
             return;
          }
-         this._value = at;
+         this.put(at);
+         this.held = at;
          if(this.readout != null)
          {
             this.paint();
          }
+      }
+
+      protected function put(at:Number) : void
+      {
+         this._value = at;
       }
 
       override public function get literal() : String
@@ -126,8 +132,8 @@ package ui
             return false;
          }
          at = (this.value <= 0 ? this.low - this.stop : this.value) + by * this.step * scale;
-         this.value = at < this.low ? (this.stop > 0 ? 0 : this.low)
-                    : Config.clamp(at,this.low,this.top,this.value);
+         this.put(at < this.low ? (this.stop > 0 ? 0 : this.low)
+                : Config.clamp(at,this.low,this.top,this.value));
          this.paint();
          return true;
       }
@@ -248,7 +254,7 @@ package ui
          var along:Number = Config.clamp((this.mouseX - this.lane - 1) / this.slide,0,1,0);
          var steps:Number = Math.round(along * this.run / this.step);
          var at:Number = this.low - this.stop + steps * this.step;
-         this.value = at < this.low ? 0 : Config.clamp(at,this.low,this.top,this.value);
+         this.put(at < this.low ? 0 : Config.clamp(at,this.low,this.top,this.value));
          this.paint();
          if(this.live)
          {
