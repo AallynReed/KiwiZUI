@@ -103,7 +103,7 @@ package
 
       private static const FMT:TextFormat = new TextFormat(FONT,null,VALUE,false,false,false,null,null);
 
-      private static const GUTTER:int = 2;
+      public static const GUTTER:int = 2;
 
       private static const CAP:Number = 0.6;
 
