@@ -11,6 +11,7 @@ package ui
    import flash.geom.Rectangle;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
+   import flash.utils.getTimer;
 
    public class Manager extends Sprite
    {
@@ -37,7 +38,7 @@ package ui
 
       private static const FIND:int = 36;
 
-      private static const FLOW:int = 4;
+      private static const PACE:int = 100;
 
       public var aside:Function;
 
@@ -113,6 +114,10 @@ package ui
       private var work:Array = [];
 
       private var ticker:DisplayObjectContainer;
+
+      private var due:int = 0;
+
+      private var saving:Boolean = false;
 
       private var span:int;
 
@@ -263,7 +268,7 @@ package ui
       private function refit() : void
       {
          var record:Object = General.record(this.mods,this.order,this.held,this.saved,
-                                            this.work.length > 0);
+                                            this.saving);
          if(record == null)
          {
             return;
@@ -904,25 +909,67 @@ package ui
 
       private function general(key:String) : void
       {
-         if(this.work.length > 0)
+         if(key == General.APPLY || key == General.REVERT)
          {
-            return;
-         }
-         if(key == General.APPLY)
-         {
-            this.spread();
-         }
-         else if(key == General.REVERT)
-         {
-            this.rewind();
+            if(this.saving)
+            {
+               return;
+            }
+            this.saving = true;
+            if(key == General.APPLY)
+            {
+               this.spread();
+            }
+            else
+            {
+               this.rewind();
+            }
          }
          else
          {
             this.held[key] = this.literal;
-            Hub.write(Hub.ADDRESS,General.HOLD + key,this.literal);
+            this.post(Hub.ADDRESS,General.HOLD + key,this.literal);
+            this.pump();
          }
          this.refit();
          this.restate();
+      }
+
+      private function tally() : void
+      {
+         var act:Act = null;
+         var i:int = 0;
+         if(!this.saving || !this.shown)
+         {
+            return;
+         }
+         while(i < this.rows.length)
+         {
+            act = this.rows[i] as Act;
+            if(act != null && act.key == General.APPLY)
+            {
+               act.say("Applying… " + this.work.length + " left");
+               return;
+            }
+            i++;
+         }
+      }
+
+      private function post(swf:String, key:String, value:String) : void
+      {
+         var job:Array = null;
+         var i:int = 0;
+         while(i < this.work.length)
+         {
+            job = this.work[i] as Array;
+            if(String(job[0]) == swf && String(job[1]) == key)
+            {
+               job[2] = value;
+               return;
+            }
+            i++;
+         }
+         this.work.push([swf,key,value]);
       }
 
       private function spread() : void
@@ -959,7 +1006,7 @@ package ui
          {
             job = jobs[i] as Array;
             this.adopt(job[4] as Object,job[5] as Object,String(job[2]));
-            this.work.push([String(job[0]),String(job[1]),String(job[2])]);
+            this.post(String(job[0]),String(job[1]),String(job[2]));
             i++;
          }
       }
@@ -990,7 +1037,7 @@ package ui
                this.restore(String(pair[0]),key,String(pair[1]));
                i++;
             }
-            this.work.push([Hub.ADDRESS,General.MARK + key,""]);
+            this.post(Hub.ADDRESS,General.MARK + key,"");
             delete this.held[key];
          }
          this.saved = {};
@@ -1005,28 +1052,33 @@ package ui
             return;
          }
          this.adopt(at[0] as Object,at[1] as Object,value);
-         this.work.push([swf,key,value]);
+         this.post(swf,key,value);
       }
 
       private function pump(e:Event = null) : void
       {
          var job:Array = null;
-         var n:int = 0;
-         while(n < FLOW && this.work.length > 0)
+         if(getTimer() < this.due)
+         {
+            return;
+         }
+         if(this.work.length > 0)
          {
             job = this.work.shift() as Array;
             Hub.write(String(job[0]),String(job[1]),String(job[2]));
-            n++;
+            this.due = getTimer() + PACE;
          }
          if(this.work.length > 0 && this.ticker != null)
          {
             this.ticker.addEventListener(Event.ENTER_FRAME,this.pump);
+            this.tally();
             return;
          }
          if(this.ticker != null)
          {
             this.ticker.removeEventListener(Event.ENTER_FRAME,this.pump);
          }
+         this.saving = false;
          this.refit();
          if(this.shown)
          {

@@ -224,7 +224,7 @@ package ui
                while(k < specs.length)
                {
                   one = specs[k];
-                  if(one.key == key)
+                  if(one.key == key && String(one.value) != value)
                   {
                      out.push([String((parts[j] as Object).swf),key,value,
                                String(one.value),parts[j],one]);

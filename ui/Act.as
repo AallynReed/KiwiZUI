@@ -32,6 +32,16 @@ package ui
          addEventListener(MouseEvent.CLICK,this.onClick);
       }
 
+      public function say(body:String) : void
+      {
+         if(this.face.text == body)
+         {
+            return;
+         }
+         this.face.text = body;
+         this.paint();
+      }
+
       override public function get literal() : String
       {
          return "";
