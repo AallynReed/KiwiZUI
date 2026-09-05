@@ -46,6 +46,7 @@ ALIAS = {
 
 RARITY = ["Common", "Uncommon", "Rare"]
 WEIGHT = ["Light", "Medium", "Heavy", "Very heavy"]
+SPECIES = 154
 
 RANGE = {"Light": (19.05, 20.0), "Medium": (38.25, 40.0),
          "Heavy": (67.25, 70.0), "Very heavy": (115.25, 120.0)}
@@ -55,6 +56,7 @@ WAS = {"Light": (7.5, 10.0), "Medium": (21.0, 30.0),
 
 TROPHY = "$prefabs_placeable_deco_trophy_fish_"
 TIERS = ["basic", "silver", "gold"]
+TAILS = ["_item_name", "_name"]
 DECO = r"E:\Trove\languages\en\prefabs_placeable_deco*.binfab"
 
 TROPHY_ALIAS = {
@@ -63,13 +65,22 @@ TROPHY_ALIAS = {
 }
 
 
-def trophy_names() -> dict[str, str]:
-    """Every fish-trophy stem, with the name its `basic` tier carries."""
-    out: dict[str, str] = {}
+def trophy_names() -> dict[str, tuple[str, int]]:
+    """Every fish-trophy stem, with the name its `basic` tier carries and which of the
+    two endings the game spells its keys with.
+
+    Both endings are live. Everything up to the Long Shade fish is `_item_name`; the
+    eight event fish added with it are `_name`, and looking for one ending alone is why
+    their trophies matched no fish at all."""
+    out: dict[str, tuple[str, int]] = {}
     for path in glob.glob(DECO):
         for key, value in extract_localization_map(Path(path).read_bytes()).items():
-            if key.startswith(TROPHY) and key.endswith("_basic_item_name"):
-                out[key[len(TROPHY):-len("_basic_item_name")]] = value.strip()
+            if not key.startswith(TROPHY):
+                continue
+            for i, tail in enumerate(TAILS):
+                if key.endswith("_basic" + tail):
+                    out[key[len(TROPHY):-len("_basic" + tail)]] = (value.strip(), i)
+                    break
     if not out:
         raise SystemExit(f"no fish trophies found under {DECO}")
     return out
@@ -79,7 +90,8 @@ def plain(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", text.lower())
 
 
-def trophy_stems(keys: dict[str, str], by_name: dict[str, list[str]]) -> dict[str, str]:
+def trophy_stems(keys: dict[str, tuple[str, int]],
+                 by_name: dict[str, list[str]]) -> dict[str, str]:
     """Each trophy stem mapped to the fish key it belongs to.
 
     Joined on the key first and on the name second. The key is the better of the two -
@@ -90,8 +102,12 @@ def trophy_stems(keys: dict[str, str], by_name: dict[str, list[str]]) -> dict[st
     Where the key does not line up the name usually does, and two need naming outright."""
     stems: dict[str, list[str]] = {}
     for key in by_name_keys(by_name):
-        stem = key[len("$prefabs_item_fish_"):]
-        for suffix in ("_item_name", "_name"):
+        stem = key
+        for prefix in ("$prefabs_item_fish_", "$prefabs_fish_"):
+            if stem.startswith(prefix):
+                stem = stem[len(prefix):]
+                break
+        for suffix in TAILS:
             if stem.endswith(suffix):
                 stem = stem[:-len(suffix)]
                 break
@@ -99,7 +115,7 @@ def trophy_stems(keys: dict[str, str], by_name: dict[str, list[str]]) -> dict[st
 
     longest = sorted(by_name, key=len, reverse=True)
     out: dict[str, str] = {}
-    for stem, shown in keys.items():
+    for stem, (shown, _) in keys.items():
         if stem in TROPHY_ALIAS:
             out[stem] = by_name[TROPHY_ALIAS[stem]][0]
             continue
@@ -149,7 +165,8 @@ def build() -> tuple[list[str], list[str], list[str], list[str], list[str]]:
     by_name: dict[str, list[str]] = {}
     for key, value in names.items():
         by_name.setdefault(value, []).append(key)
-    owner = trophy_stems(trophy_names(), by_name)
+    trophies_by_stem = trophy_names()
+    owner = trophy_stems(trophies_by_stem, by_name)
 
     liquids: list[str] = []
     pools: list[str] = []
@@ -190,7 +207,12 @@ def build() -> tuple[list[str], list[str], list[str], list[str], list[str]]:
                               "1" if old else "0", r[10], r[11]]))
 
     at = {row.split("|")[0]: i for i, row in enumerate(rows)}
-    mounted = sorted(f"{stem}|{at[key]}" for stem, key in owner.items() if key in at)
+    orphans = sorted(stem for stem, key in owner.items() if key not in at)
+    if orphans:
+        print(f"  {len(orphans)} trophies name a fish the sheet does not list, skipped: "
+              + ", ".join(orphans))
+    mounted = sorted(f"{stem}|{at[key]}|{trophies_by_stem[stem][1]}"
+                     for stem, key in owner.items() if key in at)
     return rows, liquids, pools, poles, mounted
 
 
@@ -224,6 +246,8 @@ HEAD = '''package
       private static const TROPHY:String = "$prefabs_placeable_deco_trophy_fish_";
 
       private static const TIERS:Array = ["basic","silver","gold"];
+
+      private static const TAILS:Array = ["_item_name","_name"];
 
       private static var words:Array = null;
 
@@ -478,6 +502,7 @@ TAIL = '''
          var parts:Array = null;
          var fish:Fish = null;
          var tier:String = null;
+         var tail:String = null;
          var found:int = 0;
          for each(row in TABLE)
          {
@@ -499,9 +524,10 @@ TAIL = '''
          {
             parts = row.split("|");
             fish = made[int(parts[1])] as Fish;
+            tail = String(TAILS[int(parts[2])]);
             for each(tier in TIERS)
             {
-               put(out,TROPHY + parts[0] + "_" + tier + "_item_name",fish);
+               put(out,TROPHY + parts[0] + "_" + tier + tail,fish);
             }
          }
          return found == 0 ? null : out;
@@ -540,6 +566,24 @@ TAIL = '''
 
 PLAIN, LEAST, RECORD, HAIR, WHOLE, NOTHING = range(6)
 
+STRING = re.compile(r'"((?:[^"\\]|\\.)*)"')
+
+
+def strings(body: str) -> list[str]:
+    """Every string literal in an ActionScript array, unescaped.
+
+    A literal quote has to be read back as one rather than as the end of the string:
+    a hint that names an event in quotes would otherwise split into three, and the row
+    counts that guard the table would be counting fragments."""
+    return [s.replace('\\"', '"').replace("\\\\", "\\") for s in STRING.findall(body)]
+
+
+def array(src: str, name: str, where: str) -> list[str]:
+    block = re.search(r"const " + name + r":Array = \[(.*?)\];", src, re.S)
+    if not block:
+        raise SystemExit(f"{where} has no {name} table")
+    return strings(block.group(1))
+
 
 def parse() -> list[dict]:
     """The shipped Fish.as read back as data, so what is checked is the table that is
@@ -547,10 +591,7 @@ def parse() -> list[dict]:
     src = OUT.read_text(encoding="utf-8")
 
     def table(name: str) -> list[str]:
-        block = re.search(r"const " + name + r":Array = \[(.*?)\];", src, re.S)
-        if not block:
-            raise SystemExit(f"Fish.as has no {name} table")
-        return re.findall(r'"([^"]*)"', block.group(1))
+        return array(src, name, "Fish.as")
 
     liquids, pools, poles = table("LIQUID"), table("POOL"), table("POLE")
     out = []
@@ -589,7 +630,7 @@ def standing(fish: dict, caught: float) -> int:
 def verify_built(built: str) -> None:
     """The bands and the table as they came back out of the compiled SWF.
 
-    Eight numbers stand in for a 146-row table of minimums and maximums, so they are the
+    Eight numbers stand in for a 154-row table of minimums and maximums, so they are the
     one thing here that a compiler folding a constant or a decompiler rendering a float
     could quietly change - and a range that is a hundredth out is wrong for a third of
     the fish in the game at once. Checked against the build rather than the source for
@@ -621,16 +662,13 @@ def trophies(built: str) -> list[str]:
     it belongs to is found through the trophy's key and not the fish's. A stem that named
     nothing would be a fish whose trophy is invisible to the tooltip, which is exactly the
     bug this table was added to fix and exactly as silent."""
-    found = re.search(r"MOUNTED:Array = \[(.*?)\];", built, re.S)
-    if not found:
-        raise SystemExit("the build has no trophy table")
-    stems = [row.split("|")[0] for row in re.findall(r'"([^"]*)"', found.group(1))]
+    stems = [row.split("|") for row in array(built, "MOUNTED", "the build")]
     have: set[bytes] = set()
     for path in sorted(Path(r"E:\Trove\languages\en").glob("prefabs_placeable_deco*.binfab")):
         have |= set(re.findall(rb"\$[A-Za-z0-9_]+", path.read_bytes()))
-    missing = [f"{TROPHY}{s}_{t}_item_name"
+    missing = [f"{TROPHY}{s[0]}_{t}{TAILS[int(s[2])]}"
                for s in stems for t in TIERS
-               if f"{TROPHY}{s}_{t}_item_name".encode() not in have]
+               if f"{TROPHY}{s[0]}_{t}{TAILS[int(s[2])]}".encode() not in have]
     if missing:
         raise SystemExit(f"{len(missing)} trophy names are in no language file: "
                          + ", ".join(missing[:5]))
@@ -639,12 +677,12 @@ def trophies(built: str) -> list[str]:
 
 def check() -> None:
     """Fuzz the classification over every fish at every hundredth of a pound it can
-    weigh. The bands are eight numbers doing the work of a 146-row table, so a boundary
+    weigh. The bands are eight numbers doing the work of a 154-row table, so a boundary
     that is one hundredth out is wrong for a third of the fish in the game at once and
     wrong nowhere a spot check would look."""
     fish = parse()
-    if len(fish) != 146:
-        raise SystemExit(f"Fish.as holds {len(fish)} fish, expected 146")
+    if len(fish) != SPECIES:
+        raise SystemExit(f"Fish.as holds {len(fish)} fish, expected {SPECIES}")
     seen = set()
     for f in fish:
         band = WEIGHT[f["weight"]]
@@ -687,13 +725,9 @@ def main() -> None:
                 + quoted(pools, "         ") + "];\n")
     body.append("      private static const POLE:Array = [\n"
                 + quoted(poles, "         ") + "];\n")
-    body.append("      /** key | rarity | weight class | liquid | pool | pole | aged |"
-                " hint | note */\n"
-                "      private static const TABLE:Array = [\n"
+    body.append("      private static const TABLE:Array = [\n"
                 + quoted(rows, "         ") + "];\n")
-    body.append("      /** trophy key stem | the row of TABLE it is a trophy of. The stem\n"
-                "       *  alone, because all three tiers hang off it. */\n"
-                "      private static const MOUNTED:Array = [\n"
+    body.append("      private static const MOUNTED:Array = [\n"
                 + quoted(mounted, "         ") + "];\n")
     body.append(TAIL)
     OUT.write_text("".join(body), encoding="utf-8")
