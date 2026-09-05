@@ -6,79 +6,73 @@ package ui
    import flash.events.Event;
    import flash.external.ExternalInterface;
    import flash.geom.Rectangle;
-   
+   import flash.utils.Dictionary;
+
    public class ObjectPreview extends Sprite
    {
-      
-      private static var listeners:Array = null;
-      
+
+      private static const WAITING:Dictionary = new Dictionary();
+
+      private static var armed:Boolean = false;
+
       private var _textureName:String;
-      
+
       private var image:Bitmap = new Bitmap(new BitmapData(1,1));
-      
+
       private var _imageWidth:Number;
-      
+
       private var _imageHeight:Number;
-      
+
       private var _loaded:Boolean = false;
-      
+
+      private var filed:String = null;
+
       public var loadedCallback:Function = null;
-      
-      public function ObjectPreview(param1:int = -1, param2:int = -1)
+
+      public function ObjectPreview(w:int = -1, h:int = -1)
       {
          super();
          addChild(this.image);
-         this._imageWidth = param1;
-         this._imageHeight = param2;
+         this._imageWidth = w;
+         this._imageHeight = h;
          this.addEventListener(Event.REMOVED_FROM_STAGE,this.onRemovedFromStage,false,0,true);
-         if(IggyFunctions.inIggy)
-         {
-            ExternalInterface.addCallback("objectPreviewReady",objectPreviewReady);
-         }
+         arm();
       }
-      
-      private static function findListener(param1:ObjectPreview) : int
+
+      private static function arm() : void
       {
-         var _loc2_:int = 0;
-         if(listeners)
+         if(armed || !IggyFunctions.inIggy)
          {
-            _loc2_ = 0;
-            while(_loc2_ < listeners.length)
-            {
-               if(listeners[_loc2_] == param1)
-               {
-                  return _loc2_;
-               }
-               _loc2_++;
-            }
+            return;
          }
-         return -1;
+         armed = true;
+         ExternalInterface.addCallback("objectPreviewReady",objectPreviewReady);
       }
-      
-      public static function objectPreviewReady(param1:String) : void
+
+      public static function objectPreviewReady(texture:String) : void
       {
-         var _loc2_:ObjectPreview = null;
-         var _loc3_:* = 0;
-         if(listeners != null)
+         var preview:ObjectPreview = null;
+         var key:String = texture == null ? "" : texture;
+         var queue:Array = WAITING[key] as Array;
+         var i:int = 0;
+         if(queue == null)
          {
-            _loc2_ = null;
-            _loc3_ = int(listeners.length - 1);
-            while(_loc3_ >= 0)
+            return;
+         }
+         delete WAITING[key];
+         while(i < queue.length)
+         {
+            preview = queue[i] as ObjectPreview;
+            i++;
+            if(preview == null || preview.filed != key)
             {
-               _loc2_ = listeners[_loc3_] as ObjectPreview;
-               if(_loc2_)
-               {
-                  if(param1 == _loc2_.textureName)
-                  {
-                     _loc2_.removeListener();
-                     _loc2_.replaceTexture();
-                  }
-               }
-               _loc3_--;
+               continue;
             }
+            preview.filed = null;
+            preview.replaceTexture();
          }
       }
-      
+
       public function get loaded() : Boolean
       {
          return this._loaded;
@@ -88,12 +82,12 @@ package ui
       {
          return this.image.width;
       }
-      
+
       public function get imageHeight() : int
       {
          return this.image.height;
       }
-      
+
       public function get textureName() : String
       {
          if(this._textureName)
@@ -102,63 +96,77 @@ package ui
          }
          return "";
       }
-      
-      public function set textureName(param1:String) : void
+
+      public function set textureName(name:String) : void
       {
-         if(this._textureName != param1)
+         if(this._textureName == name)
          {
-            this._textureName = param1;
-            if(!param1 || param1.length == 0)
-            {
-               if(IggyFunctions.inIggy)
-               {
-                  this.removeListener();
-                  IggyFunctions.setTextureForBitmap(this.image,null);
-                  this._loaded = false;
-               }
-            }
-            else
-            {
-               this.addListener();
-            }
+            return;
          }
+         this._textureName = name;
+         if(!name || name.length == 0)
+         {
+            this.removeListener();
+            if(IggyFunctions.inIggy)
+            {
+               IggyFunctions.setTextureForBitmap(this.image,null);
+               this._loaded = false;
+            }
+            return;
+         }
+         this.addListener();
       }
-      
+
       public function getBitmapBounds() : Rectangle
       {
          return this.image.getBounds(this.image);
       }
-      
+
       private function addListener() : void
       {
-         if(!listeners)
+         var queue:Array = null;
+         this.removeListener();
+         this.filed = this._textureName;
+         queue = WAITING[this.filed] as Array;
+         if(queue == null)
          {
-            listeners = [];
+            queue = [];
+            WAITING[this.filed] = queue;
          }
-         if(findListener(this) == -1)
+         if(queue.indexOf(this) < 0)
          {
-            listeners.push(this);
+            queue.push(this);
          }
          if(IggyFunctions.inIggy)
          {
             ExternalInterface.call("UIComponent.CheckTextureExists",this._textureName);
          }
       }
-      
-      private function onRemovedFromStage(param1:Event) : void
+
+      private function onRemovedFromStage(e:Event) : void
       {
          this.removeListener();
       }
-      
+
       private function removeListener() : void
       {
-         var _loc1_:int = findListener(this);
-         if(_loc1_ >= 0)
+         var at:int = 0;
+         var queue:Array = this.filed == null ? null : WAITING[this.filed] as Array;
+         if(queue != null)
          {
-            listeners.splice(_loc1_,1);
+            at = queue.indexOf(this);
+            if(at >= 0)
+            {
+               queue.splice(at,1);
+            }
+            if(queue.length == 0)
+            {
+               delete WAITING[this.filed];
+            }
          }
+         this.filed = null;
       }
-      
+
       private function replaceTexture() : void
       {
          var bounds:Rectangle = null;
@@ -194,19 +202,24 @@ package ui
          {
          }
       }
-      
-      public function resize(param1:Number, param2:Number) : void
+
+      public function resize(w:Number, h:Number) : void
       {
-         this._imageWidth = param1;
-         this._imageHeight = param2;
-         if(Boolean(this._loaded) && Boolean(this._textureName) && this._textureName.length > 0)
+         if(this._imageWidth == w && this._imageHeight == h)
          {
-            this.image.width = Math.abs(param1);
-            this.image.height = Math.abs(param2);
-            if(IggyFunctions.inIggy)
-            {
-               ExternalInterface.call("UIComponent.CheckTextureExists",this._textureName);
-            }
+            return;
+         }
+         this._imageWidth = w;
+         this._imageHeight = h;
+         if(!this._loaded || !this._textureName || this._textureName.length == 0)
+         {
+            return;
+         }
+         this.image.width = Math.abs(w);
+         this.image.height = Math.abs(h);
+         if(IggyFunctions.inIggy)
+         {
+            ExternalInterface.call("UIComponent.CheckTextureExists",this._textureName);
          }
       }
    }

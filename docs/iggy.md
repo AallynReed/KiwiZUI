@@ -142,6 +142,20 @@ explicitly or nothing ever arrives.
 [`ui.ObjectPreview`](../ui/ObjectPreview.as) implements the handshake, and
 [`ui.Slot`](../ui/Slot.as) is a whole item square built on it.
 
+**The handshake is cheap; building previews is not.** Vanilla makes a handful of these
+and is careless about three things a screen making dozens cannot be. It registers
+`objectPreviewReady` from the constructor, so the engine is handed the same binding once
+per preview rather than once. It keeps every pending request in one flat array, scanned
+on each add and walked in full on each reply, so filling a grid of n slots is O(n squared)
+both ways. And `resize` is an `ExternalInterface.call`, not a property write - a layout
+pass that re-sizes eight slots to the size they already have is eight round-trips into
+the engine for nothing.
+
+`ui.ObjectPreview` registers once, files pending requests under the texture name the
+reply will carry, and returns from `resize` when neither dimension moved. Worth knowing
+if you write anything else that talks to the engine per item: the call rate to match is
+the one the screen you replaced actually used.
+
 **Texture size comes from the file, not from the request.**
 `setTextureForBitmap(bmp, name, 48, 48)` produces a 24x24 bitmap; the width and height
 arguments do not scale anything. Set `bmp.width` and `bmp.height` afterwards if you
