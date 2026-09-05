@@ -9,6 +9,7 @@ package
    import flash.geom.Rectangle;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
+   import flash.text.TextFormat;
    import flash.text.TextLineMetrics;
    import flash.ui.Keyboard;
    import ui.*;
@@ -199,6 +200,7 @@ package
          this.checkPacked();
          this.checkPalette();
          this.checkKeysDistinct();
+         this.checkTextFitting();
          this.checkAccentPlacement();
          this.checkRoundTrip();
          this.checkRestate();
@@ -867,6 +869,73 @@ package
          this.same("six digits put it back to opaque",renderer.alphaOf("accent"),1);
          this.same("a blend of two colours is opaque",
                    renderer.alphaOf("accent"),1);
+      }
+
+      private function checkTextFitting() : void
+      {
+         var body:String = null;
+         var probe:TextField = null;
+         var wide:int = 0;
+         var bad:String = "";
+         var slack:String = "";
+         var words:Array = ["Player","A Rather Long Player Name Indeed",
+                            "Wollarkka the Unmaker of Worlds","x",
+                            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","Two Words"];
+         var i:int = 0;
+         while(i < words.length)
+         {
+            body = String(words[i]);
+            wide = 10;
+            while(wide <= 260)
+            {
+               probe = renderer.label(0,0,12,TextFieldAutoSize.LEFT,body);
+               renderer.elide(probe,wide);
+               if(probe.text != this.elidedBy(body,wide))
+               {
+                  bad += " " + body.substr(0,6) + "@" + wide;
+               }
+               probe = renderer.label(0,0,12,TextFieldAutoSize.LEFT,body);
+               if(renderer.fit(probe,wide,18,6) != this.fittedBy(body,wide))
+               {
+                  slack += " " + body.substr(0,6) + "@" + wide;
+               }
+               wide += 10;
+            }
+            i++;
+         }
+         this.same("elide bisects to the same text a scan would find",bad,"");
+         this.same("fit bisects to the same size a scan would find",slack,"");
+      }
+
+      private function elidedBy(body:String, wide:Number) : String
+      {
+         var probe:TextField = renderer.label(0,0,12,TextFieldAutoSize.LEFT,body);
+         var cut:String = body;
+         while(cut.length > 1 && probe.textWidth > wide)
+         {
+            cut = cut.substr(0,cut.length - 1);
+            renderer.say(probe,cut + "…");
+         }
+         return probe.text;
+      }
+
+      private function fittedBy(body:String, wide:Number) : int
+      {
+         var probe:TextField = renderer.label(0,0,12,TextFieldAutoSize.LEFT,body);
+         var fmt:TextFormat = probe.defaultTextFormat;
+         var at:int = 18;
+         while(at > 6)
+         {
+            fmt.size = at;
+            probe.defaultTextFormat = fmt;
+            probe.setTextFormat(fmt);
+            if(probe.textWidth <= wide)
+            {
+               return at;
+            }
+            at--;
+         }
+         return at;
       }
 
       private function checkKeysDistinct() : void

@@ -530,23 +530,31 @@ package
 
       public static function fit(field:TextField, wide:Number, size:int, floor:int) : int
       {
-         var at:int = size;
          var fmt:TextFormat = field.defaultTextFormat;
-         while(at > floor)
+         var best:int = size < floor ? size : floor;
+         var low:int = floor;
+         var high:int = size;
+         var mid:int = 0;
+         while(low <= high)
          {
-            fmt.size = at;
+            mid = low + int((high - low) / 2);
+            fmt.size = mid;
             field.defaultTextFormat = fmt;
             field.setTextFormat(fmt);
             if(field.textWidth <= wide)
             {
-               return at;
+               best = mid;
+               low = mid + 1;
             }
-            at--;
+            else
+            {
+               high = mid - 1;
+            }
          }
-         fmt.size = at;
+         fmt.size = best;
          field.defaultTextFormat = fmt;
          field.setTextFormat(fmt);
-         return at;
+         return best;
       }
 
       public static function fitBox(field:TextField, wide:Number, high:Number, size:int,
@@ -576,11 +584,29 @@ package
       public static function elide(field:TextField, wide:Number) : void
       {
          var body:String = field.text;
-         while(body.length > 1 && field.textWidth > wide)
+         var best:int = 0;
+         var low:int = 1;
+         var high:int = body.length - 1;
+         var mid:int = 0;
+         if(field.textWidth <= wide)
          {
-            body = body.substr(0,body.length - 1);
-            renderer.say(field,body + "…");
+            return;
          }
+         while(low <= high)
+         {
+            mid = low + int((high - low) / 2);
+            renderer.say(field,body.substr(0,mid) + "…");
+            if(field.textWidth <= wide)
+            {
+               best = mid;
+               low = mid + 1;
+            }
+            else
+            {
+               high = mid - 1;
+            }
+         }
+         renderer.say(field,body.substr(0,best < 1 ? 1 : best) + "…");
       }
 
       public static function elideLines(field:TextField, lines:int) : void
@@ -986,7 +1012,7 @@ package
 
       private static function commas(digits:String) : String
       {
-         var out:String = "";
+         var out:Array = [];
          var seen:int = 0;
          var i:int = digits.length - 1;
          var ch:String = null;
@@ -995,16 +1021,17 @@ package
             ch = digits.charAt(i);
             if(seen > 0 && seen % 3 == 0 && ch >= "0" && ch <= "9")
             {
-               out = "," + out;
+               out.push(",");
             }
-            out = ch + out;
+            out.push(ch);
             if(ch >= "0" && ch <= "9")
             {
                seen++;
             }
             i--;
          }
-         return out;
+         out.reverse();
+         return out.join("");
       }
 
       public static function numbersIn(body:String = "") : String
