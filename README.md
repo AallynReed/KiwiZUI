@@ -21,10 +21,11 @@ Everything here is used in production by the Zakros UI mods. Take any of it.
 | `Hub.as` | Declaring your mod's settings so another screen can offer them. |
 | `Api.as` | Answering instructions from other mods, on the same channel. |
 | `Legacy.as` | Reading declarations written for Criteox's Mod Setting Manager. |
+| `InsigniaArt.as` | The name a graft binds Trove's club insignia to, for `ui/Sigil`. |
 | `GemReader.as` | Gem tier, level, quality and boost maths. |
 | `Clock.as` | The wall clock, Trove's day and week resets, and durations in the game's own words. |
 | `Rotations.as` | Which cycle of a weekly rotation is running, and when the next one starts. |
-| `ui/` | 32 classes: controls, popups, item slots, tooltips and the helpers behind them. |
+| `ui/` | 36 classes: controls, popups, item slots, tooltips and the helpers behind them. |
 | `test/` | A gallery SWF that puts every control on one screen. |
 
 ## Documentation

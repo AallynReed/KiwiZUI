@@ -105,6 +105,8 @@ through weight, and a screen that mixes the two reads as two screens. Pick one p
 | [`Icon`](../ui/Icon.as) | A bitmap that knows which game texture it is showing, and reports whether the art actually arrived. |
 | [`Art`](../ui/Art.as) | A symbol grafted into the SWF's own tag stream. See [art.md](art.md). |
 | [`SlotDragDropHelper`](../ui/SlotDragDropHelper.as) | Drag between slots. |
+| [`Sigil`](../ui/Sigil.as) | Trove's club insignia, shield inside wings, one frame each. Needs the art grafted and bound to `InsigniaArt`. |
+| [`Tether`](../ui/Tether.as) | The group icon beside a player, with a pip on the one leading the group. |
 
 **Most of what is public on `Slot` has no caller in this repository, and that is the
 point.** The engine drives a slot by writing its properties from the outside, the same way
