@@ -180,16 +180,22 @@ package
          return int(columns[i]);
       }
 
+      public function rollAt(i:int) : Number
+      {
+         return Number(rolls[i]);
+      }
+
       public function percentAt(i:int) : String
       {
          return Math.round(Number(rolls[i]) * 100) + "%";
       }
 
-      public function projectAt(i:int) : String
+      public function projectAt(i:int, extra:int = 0) : String
       {
          var band:Array = BANDS[_tier][_socket][int(columns[i])] as Array;
          var scaled:Number = Number(band[1]) + (Number(band[2]) - Number(band[1])) * Number(rolls[i]);
-         var value:Number = Number(band[0]) * (scaled * (int(boosts[i]) + 1) + lift(maxLevel));
+         var value:Number = Number(band[0])
+                          * (scaled * (int(boosts[i]) + 1 + extra) + lift(maxLevel));
          var digits:int = int(places[i]);
          var body:String = digits > 0 ? value.toFixed(digits) : grouped(Math.round(value));
          return marks[i] == true ? body + "%" : body;
