@@ -921,19 +921,23 @@ package
          this.same("revert wakes once something is saved",
                    (General.record(mods,order,{},{"accent":"map.swf~#FF8800"})
                       .options[record.options.length - 1] as Object).value,"on");
+         this.same("applying marks the buttons dead",
+                   (General.record(mods,order,{},{},true)
+                      .options[record.options.length - 2] as Object).value,"off");
          this.same("a held value beats the majority",
                    (this.rowFor(General.record(mods,order,{"accent":"#112233"},{}),
                                 "accent") as Object).value,"#112233");
          jobs = General.queue(mods,order,"accent","#5FD3E8");
-         this.same("only the mod that differs is queued",jobs.length,1);
-         this.same("and it is queued by swf name",String((jobs[0] as Array)[0]),"map.swf");
+         this.same("every mod that declares the key is queued",jobs.length,2);
+         this.same("and each is queued by swf name",String((jobs[1] as Array)[0]),"map.swf");
          this.same("the old value is carried for the undo",
-                   String((jobs[0] as Array)[3]),"#FF8800");
-         this.same("nothing is queued when every mod already holds the value",
-                   General.queue(mods,order,"accent","#5FD3E8").length
-                 + General.queue(mods,order,"accent","#FF8800").length,2);
+                   String((jobs[1] as Array)[3]),"#FF8800");
+         this.same("a mod that already holds the value is written anyway",
+                   String((jobs[0] as Array)[3]),"#5FD3E8");
+         this.same("a key no mod declares queues nothing",
+                   General.queue(mods,order,"nosuchkey","1").length,0);
          this.same("a packed undo round trips",
-                   String((General.unpack(General.pack(jobs))[0] as Array)[1]),"#FF8800");
+                   String((General.unpack(General.pack(jobs))[1] as Array)[1]),"#FF8800");
          this.same("find reaches a mod by swf and key",
                    (General.find(mods,order,"map.swf","accent")[1] as Object).value,"#FF8800");
          this.same("find answers nothing for a key that is not there",

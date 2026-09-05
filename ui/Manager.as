@@ -112,6 +112,8 @@ package ui
 
       private var work:Array = [];
 
+      private var ticker:DisplayObjectContainer;
+
       private var span:int;
 
       private var high:int;
@@ -201,6 +203,12 @@ package ui
          var parts:Array = null;
          var title:String = null;
          var record:Object = null;
+         if(name.substr(0,General.HOLD.length) == General.HOLD)
+         {
+            this.held[name.substring(General.HOLD.length)] = value;
+            this.refit();
+            return true;
+         }
          if(name.substr(0,General.MARK.length) == General.MARK)
          {
             title = name.substring(General.MARK.length);
@@ -254,7 +262,8 @@ package ui
 
       private function refit() : void
       {
-         var record:Object = General.record(this.mods,this.order,this.held,this.saved);
+         var record:Object = General.record(this.mods,this.order,this.held,this.saved,
+                                            this.work.length > 0);
          if(record == null)
          {
             return;
@@ -356,6 +365,7 @@ package ui
          this.search.value = "";
          this.pickScroll = 0;
          this.covered = [];
+         this.ticker = host;
          while(i < host.numChildren)
          {
             kid = host.getChildAt(i);
@@ -909,6 +919,7 @@ package ui
          else
          {
             this.held[key] = this.literal;
+            Hub.write(Hub.ADDRESS,General.HOLD + key,this.literal);
          }
          this.refit();
          this.restate();
@@ -1007,12 +1018,15 @@ package ui
             Hub.write(String(job[0]),String(job[1]),String(job[2]));
             n++;
          }
-         if(this.work.length > 0)
+         if(this.work.length > 0 && this.ticker != null)
          {
-            addEventListener(Event.ENTER_FRAME,this.pump);
+            this.ticker.addEventListener(Event.ENTER_FRAME,this.pump);
             return;
          }
-         removeEventListener(Event.ENTER_FRAME,this.pump);
+         if(this.ticker != null)
+         {
+            this.ticker.removeEventListener(Event.ENTER_FRAME,this.pump);
+         }
          this.refit();
          if(this.shown)
          {

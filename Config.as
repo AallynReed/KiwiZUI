@@ -140,6 +140,12 @@ package
          return this.echoed == PRESENT;
       }
 
+      public function valueOf(key:String) : String
+      {
+         var text:* = this.held[key.toLowerCase()];
+         return text == null ? "" : String(text);
+      }
+
       public function saw(key:String) : Boolean
       {
          return this.arrived[key.toLowerCase()] != null;

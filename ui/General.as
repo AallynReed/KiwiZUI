@@ -15,6 +15,8 @@ package ui
 
       public static const MARK:String = "zg_was_";
 
+      public static const HOLD:String = "zg_set_";
+
       public static const READ:String =
          "Colours every Zakros UI mod shares. Set them here, press Apply, and the value "
        + "is written into every installed mod that offers it.\n\n"
@@ -51,7 +53,7 @@ package ui
       }
 
       public static function record(mods:Object, order:Array, held:Object,
-                                    saved:Object) : Object
+                                    saved:Object, busy:Boolean = false) : Object
       {
          var slot:Object = null;
          var key:String = null;
@@ -78,10 +80,12 @@ package ui
          {
             return null;
          }
-         specs.push(Hub.spec(APPLY,Hub.ACT,"Apply to every mod","on","",
+         specs.push(Hub.spec(APPLY,Hub.ACT,busy ? "Applying…" : "Apply to every mod",
+                             busy ? "off" : "on","",
                              "Writes each value above into every mod that offers it."));
-         specs.push(Hub.spec(REVERT,Hub.ACT,"Revert last apply",bare(saved) ? "off" : "on",
-                             "","Puts every mod back to what it held before the last Apply."));
+         specs.push(Hub.spec(REVERT,Hub.ACT,"Revert last apply",
+                             busy || bare(saved) ? "off" : "on","",
+                             "Puts every mod back to what it held before the last Apply."));
          return {"swf":"","title":TITLE,"group":GROUP,"readme":READ,
                  "options":specs,"id":ID,"raw":""};
       }
@@ -220,7 +224,7 @@ package ui
                while(k < specs.length)
                {
                   one = specs[k];
-                  if(one.key == key && String(one.value) != value)
+                  if(one.key == key)
                   {
                      out.push([String((parts[j] as Object).swf),key,value,
                                String(one.value),parts[j],one]);
