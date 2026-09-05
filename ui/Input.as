@@ -36,6 +36,8 @@ package ui
 
       public var clears:String = "";
 
+      private var padded:Boolean = false;
+
       public function Input(key:String, text:String, w:int, prompt:String = "", size:int = 12)
       {
          super(key,text,w);
@@ -101,6 +103,19 @@ package ui
          removeEventListener(Event.ENTER_FRAME,this.onPasted);
          this.paint();
          this.report();
+      }
+
+      public function get pad() : Boolean
+      {
+         return this.padded;
+      }
+
+      public function set pad(on:Boolean) : void
+      {
+         this.padded = on;
+         this.field.type = on ? TextFieldType.DYNAMIC : TextFieldType.INPUT;
+         this.field.selectable = !on;
+         this.field.mouseEnabled = !on;
       }
 
       public function get editing() : Boolean
@@ -233,8 +248,23 @@ package ui
             this.clear();
             return true;
          }
+         if(this.padded)
+         {
+            this.tap();
+            return true;
+         }
          this.focus();
          return true;
+      }
+
+      private function tap() : void
+      {
+         if(Keys.shows(this) || Layer.shut(this))
+         {
+            Layer.hide();
+            return;
+         }
+         Keys.beside(this);
       }
 
       public function focus() : void

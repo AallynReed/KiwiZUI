@@ -85,6 +85,24 @@ to the same question.
 the field. A box that filters a list wants every keystroke; a box that sets a config key
 must not have one.
 
+### A box the real keyboard cannot reach
+
+```actionscript
+search.pad = true;
+```
+
+Iggy routes the keyboard at a focused `TextField` and nowhere else, so a screen that never
+asks for focus has a box that cannot be typed into - which is a search box that looks
+finished and does nothing. `pad` is the other way out: the box becomes a dynamic field and
+a press opens [`Keys`](../ui/Keys.as) under it, an on-screen keyboard the player clicks. The
+box then needs no focus, takes the keyboard from nothing, and reports the same `TYPING` and
+`CHANGE` it always did.
+
+One panel is shared, it resolves every key by coordinate, and the screen lights it by
+calling `Keys.lit()` on its own frame tick. The window it opens into has to have been
+declared with `Layer.frame` or it can hang over the edge of the stage, where Iggy stops
+forwarding presses.
+
 ## Buttons
 
 | | |

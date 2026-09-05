@@ -9,6 +9,7 @@ package
    import flash.geom.Rectangle;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
+   import flash.text.TextFieldType;
    import flash.text.TextFormat;
    import flash.text.TextLineMetrics;
    import flash.ui.Keyboard;
@@ -196,6 +197,7 @@ package
          this.checkEcho();
          this.checkPushed();
          this.checkInput();
+         this.checkPad();
          this.checkColour();
          this.checkPacked();
          this.checkPalette();
@@ -780,6 +782,35 @@ package
          this.same("a default gives the cross something to do",i.clearable,true);
          i.clear();
          this.same("and the cross restores it",i.literal,"#FF8800");
+      }
+
+      private function checkPad() : void
+      {
+         var pad:Input = new Input("","",300,"Search");
+         var at:Point = new Point(4,4);
+         addChild(pad);
+         pad.pad = true;
+         Layer.frame(W,H);
+         this.same("a padded box is not an input field",pad.field.type,TextFieldType.DYNAMIC);
+         this.same("and cannot take the caret",pad.field.selectable,false);
+         pad.press(at);
+         this.same("a press opens the keyboard",Keys.shows(pad),true);
+         this.same("the keyboard is inside the stage",
+                   Keys.up && Layer.roomWide >= Keys.W,true);
+         pad.dispatchEvent(new MouseEvent(MouseEvent.MOUSE_DOWN));
+         pad.press(at);
+         this.same("and the press that closed it leaves it closed",Keys.up,false);
+         pad.press(at);
+         this.same("a press of its own opens it again",Keys.up,true);
+         pad.compose(pad.value.length,0,"g");
+         pad.compose(pad.value.length,0,"e");
+         this.same("a key types into the box",pad.value,"ge");
+         pad.compose(pad.value.length - 1,1,"");
+         this.same("and backspace takes one out",pad.value,"g");
+         pad.press(new Point(pad.x + 300 - 8,4));
+         this.same("the cross empties it without opening the keyboard",pad.value,"");
+         Layer.hide();
+         removeChild(pad);
       }
 
       private function checkAccentPlacement() : void
