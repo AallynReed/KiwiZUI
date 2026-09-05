@@ -206,6 +206,7 @@ package
          this.checkAccentPlacement();
          this.checkRoundTrip();
          this.checkRestate();
+         this.checkGeneral();
          this.checkLayer();
          this.checkTip();
          this.say(this.failures == 0 ? "\nall " + (this.lines.length) + " checks passed"
@@ -870,6 +871,90 @@ package
          this.same("a restated line keeps its parameters",(now.options[0] as Object).max,200);
          this.same("a key that is not there restates nothing",Hub.restate(line,"none","1"),null);
          this.same("a legacy line restates nothing",Hub.restate("{\"a\":1}","scale","1"),null);
+      }
+
+      private function shared(key:String) : String
+      {
+         return key == "outline" ? "1" : "#5FD3E8";
+      }
+
+      private function tinted(key:String) : String
+      {
+         return key == "accent" ? "#FF8800" : (key == "outline" ? "2" : "#0B0C0EF0");
+      }
+
+      private function checkGeneral() : void
+      {
+         var mods:Object = {};
+         var order:Array = ["Zakros UI - Compass","Zakros UI - Map"];
+         var record:Object = null;
+         var jobs:Array = null;
+         mods[order[0]] = [Hub.parse(Hub.MARK + "compass",
+            new Hub("compass.swf","Zakros UI - Compass",this.shared,"Compass")
+               .option("accent",Hub.COLOR,"Centre mark")
+               .option("panel",Hub.ALPHA,"Panel color")
+               .option("outline",Hub.STEPPER,"Text outline","0,4,1,0,Off,px")
+               .option("ticks",Hub.CHECK,"Ticks").declaration())];
+         mods[order[1]] = [Hub.parse(Hub.MARK + "map",
+            new Hub("map.swf","Zakros UI - Map",this.tinted,"Map")
+               .option("accent",Hub.ALPHA,"Accent color")
+               .option("panel",Hub.ALPHA,"Panel color")
+               .option("outline",Hub.STEPPER,"Outline","0,4,1,0,Off,px")
+               .option("solo",Hub.CHECK,"Solo").declaration())];
+         (mods[order[0]][0] as Object).swf = "compass.swf";
+         (mods[order[1]][0] as Object).swf = "map.swf";
+         record = General.record(mods,order,{},{});
+         this.same("a shared key becomes a general row",
+                   (record.options[0] as Object).key,"panel");
+         this.same("a key only one mod declares is left out",
+                   this.rowFor(record,"ticks"),null);
+         this.same("an alpha declarer makes the row an alpha row",
+                   (this.rowFor(record,"accent") as Object).type,Hub.ALPHA);
+         this.same("a stepper keeps its range",
+                   (this.rowFor(record,"outline") as Object).max,4);
+         this.same("the row counts the mods it reaches",
+                   (this.rowFor(record,"accent") as Object).label,"Accent color  (2)");
+         this.same("the last two rows are the buttons",
+                   (record.options[record.options.length - 2] as Object).key,General.APPLY);
+         this.same("revert is dead with nothing saved",
+                   (record.options[record.options.length - 1] as Object).value,"off");
+         this.same("revert wakes once something is saved",
+                   (General.record(mods,order,{},{"accent":"map.swf~#FF8800"})
+                      .options[record.options.length - 1] as Object).value,"on");
+         this.same("a held value beats the majority",
+                   (this.rowFor(General.record(mods,order,{"accent":"#112233"},{}),
+                                "accent") as Object).value,"#112233");
+         jobs = General.queue(mods,order,"accent","#5FD3E8");
+         this.same("only the mod that differs is queued",jobs.length,1);
+         this.same("and it is queued by swf name",String((jobs[0] as Array)[0]),"map.swf");
+         this.same("the old value is carried for the undo",
+                   String((jobs[0] as Array)[3]),"#FF8800");
+         this.same("nothing is queued when every mod already holds the value",
+                   General.queue(mods,order,"accent","#5FD3E8").length
+                 + General.queue(mods,order,"accent","#FF8800").length,2);
+         this.same("a packed undo round trips",
+                   String((General.unpack(General.pack(jobs))[0] as Array)[1]),"#FF8800");
+         this.same("find reaches a mod by swf and key",
+                   (General.find(mods,order,"map.swf","accent")[1] as Object).value,"#FF8800");
+         this.same("find answers nothing for a key that is not there",
+                   General.find(mods,order,"map.swf","ticks"),null);
+         this.same("the general entry is not scanned as a mod",
+                   General.queue(mods,order,General.APPLY,"").length,0);
+      }
+
+      private function rowFor(record:Object, key:String) : Object
+      {
+         var rows:Array = record.options as Array;
+         var i:int = 0;
+         while(i < rows.length)
+         {
+            if((rows[i] as Object).key == key)
+            {
+               return rows[i];
+            }
+            i++;
+         }
+         return null;
       }
 
       private function checkPacked() : void

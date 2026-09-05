@@ -22,6 +22,8 @@ package
 
       public static const COMBO:String = "combo";
 
+      public static const MULTI:String = "multi";
+
       public static const COLOR:String = "color";
 
       public static const ALPHA:String = "alpha";
@@ -33,6 +35,8 @@ package
       public static const STEPPER:String = "stepper";
 
       public static const HEADING:String = "heading";
+
+      public static const ACT:String = "act";
 
       private static const SETTLE:int = 2000;
 
@@ -325,6 +329,13 @@ package
          return text.length == 0 ? "" : text.charAt(0).toUpperCase() + text.substring(1);
       }
 
+      public static function spec(key:String, type:String, label:String,
+                                  value:String, params:String = "",
+                                  note:String = "") : Object
+      {
+         return shaped([key,type,label,value,params,note]);
+      }
+
       private static function shaped(field:Array) : Object
       {
          var range:Array = null;
@@ -344,7 +355,7 @@ package
             out.zero = range.length > 4 ? String(range[4]) : "";
             out.suffix = range.length > 5 ? String(range[5]) : "";
          }
-         else if(type == COMBO)
+         else if(type == COMBO || type == MULTI)
          {
             out.choices = choices(params);
          }

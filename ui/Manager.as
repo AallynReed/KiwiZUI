@@ -37,6 +37,8 @@ package ui
 
       private static const FIND:int = 36;
 
+      private static const FLOW:int = 4;
+
       public var aside:Function;
 
       public var swf:String = "";
@@ -103,6 +105,12 @@ package ui
       private var reported:Boolean = false;
 
       private var covered:Array = [];
+
+      private var held:Object = {};
+
+      private var saved:Object = {};
+
+      private var work:Array = [];
 
       private var span:int;
 
@@ -192,7 +200,22 @@ package ui
          var at:int = 0;
          var parts:Array = null;
          var title:String = null;
-         var record:Object = Hub.parse(name,value);
+         var record:Object = null;
+         if(name.substr(0,General.MARK.length) == General.MARK)
+         {
+            title = name.substring(General.MARK.length);
+            if(value.length == 0)
+            {
+               delete this.saved[title];
+            }
+            else
+            {
+               this.saved[title] = value;
+            }
+            this.refit();
+            return true;
+         }
+         record = Hub.parse(name,value);
          if(record == null)
          {
             return false;
@@ -221,11 +244,27 @@ package ui
             }
             parts[at] = record;
          }
+         this.refit();
          if(this.shown)
          {
             this.restate();
          }
          return true;
+      }
+
+      private function refit() : void
+      {
+         var record:Object = General.record(this.mods,this.order,this.held,this.saved);
+         if(record == null)
+         {
+            return;
+         }
+         if(this.mods[General.TITLE] == null)
+         {
+            this.order.push(General.TITLE);
+            this.order.sort(byName);
+         }
+         this.mods[General.TITLE] = [record];
       }
 
       private function restate() : void
@@ -269,6 +308,10 @@ package ui
       {
          var one:String = a.toLowerCase();
          var two:String = b.toLowerCase();
+         if(a == General.TITLE || b == General.TITLE)
+         {
+            return a == b ? 0 : (a == General.TITLE ? -1 : 1);
+         }
          return one < two ? -1 : (one > two ? 1 : 0);
       }
 
@@ -518,6 +561,14 @@ package ui
                   i++;
                }
                return new Combo(String(spec.key),String(spec.label),w,values,labels);
+            case Hub.MULTI:
+               while(i < choices.length)
+               {
+                  values.push((choices[i] as Array)[0]);
+                  labels.push((choices[i] as Array)[1]);
+                  i++;
+               }
+               return new Multi(String(spec.key),String(spec.label),w,values,labels);
             case Hub.COLOR:
                return new Picker(String(spec.key),String(spec.label),w);
             case Hub.ALPHA:
@@ -529,6 +580,8 @@ package ui
                                String(spec.prompt).length > 0 ? String(spec.prompt) : List.PROMPT);
             case Hub.HEADING:
                return new Heading(String(spec.label),w);
+            case Hub.ACT:
+               return new Act(String(spec.key),String(spec.label),w);
          }
          return null;
       }
@@ -822,6 +875,11 @@ package ui
                       ? (Config.flag(option.literal) ? "true" : "false")
                       : option.literal;
          spec.value = this.literal;
+         if(String(record.id) == General.ID)
+         {
+            this.general(String(option.key));
+            return;
+         }
          this.swf = String(record.swf);
          this.key = option.key;
          this.id = String(record.id);
@@ -832,6 +890,134 @@ package ui
          }
          dispatchEvent(new Event(Event.CHANGE));
          this.paintRows();
+      }
+
+      private function general(key:String) : void
+      {
+         if(this.work.length > 0)
+         {
+            return;
+         }
+         if(key == General.APPLY)
+         {
+            this.spread();
+         }
+         else if(key == General.REVERT)
+         {
+            this.rewind();
+         }
+         else
+         {
+            this.held[key] = this.literal;
+         }
+         this.refit();
+         this.restate();
+      }
+
+      private function spread() : void
+      {
+         var jobs:Array = null;
+         var spec:Object = null;
+         var specs:Array = (this.mods[General.TITLE][0] as Object).options as Array;
+         var lines:Array = [];
+         var i:int = 0;
+         this.saved = {};
+         while(i < specs.length)
+         {
+            spec = specs[i];
+            jobs = String(spec.type) == Hub.ACT
+                 ? [] : General.queue(this.mods,this.order,String(spec.key),
+                                      String(spec.value));
+            if(jobs.length > 0)
+            {
+               this.saved[spec.key] = General.pack(jobs);
+               lines.push([Hub.ADDRESS,General.MARK + spec.key,this.saved[spec.key]]);
+               this.enqueue(jobs);
+            }
+            i++;
+         }
+         this.work = lines.concat(this.work);
+         this.pump();
+      }
+
+      private function enqueue(jobs:Array) : void
+      {
+         var job:Array = null;
+         var i:int = 0;
+         while(i < jobs.length)
+         {
+            job = jobs[i] as Array;
+            this.adopt(job[4] as Object,job[5] as Object,String(job[2]));
+            this.work.push([String(job[0]),String(job[1]),String(job[2])]);
+            i++;
+         }
+      }
+
+      private function adopt(record:Object, spec:Object, value:String) : void
+      {
+         var line:String = Hub.restate(String(record.raw),String(spec.key),value);
+         spec.value = value;
+         if(line != null)
+         {
+            record.raw = line;
+         }
+      }
+
+      private function rewind() : void
+      {
+         var pair:Array = null;
+         var was:Array = null;
+         var key:String = null;
+         var i:int = 0;
+         for(key in this.saved)
+         {
+            was = General.unpack(String(this.saved[key]));
+            i = 0;
+            while(i < was.length)
+            {
+               pair = was[i] as Array;
+               this.restore(String(pair[0]),key,String(pair[1]));
+               i++;
+            }
+            this.work.push([Hub.ADDRESS,General.MARK + key,""]);
+            delete this.held[key];
+         }
+         this.saved = {};
+         this.pump();
+      }
+
+      private function restore(swf:String, key:String, value:String) : void
+      {
+         var at:Array = General.find(this.mods,this.order,swf,key);
+         if(at == null)
+         {
+            return;
+         }
+         this.adopt(at[0] as Object,at[1] as Object,value);
+         this.work.push([swf,key,value]);
+      }
+
+      private function pump(e:Event = null) : void
+      {
+         var job:Array = null;
+         var n:int = 0;
+         while(n < FLOW && this.work.length > 0)
+         {
+            job = this.work.shift() as Array;
+            Hub.write(String(job[0]),String(job[1]),String(job[2]));
+            n++;
+         }
+         if(this.work.length > 0)
+         {
+            addEventListener(Event.ENTER_FRAME,this.pump);
+            return;
+         }
+         removeEventListener(Event.ENTER_FRAME,this.pump);
+         this.refit();
+         if(this.shown)
+         {
+            this.restate();
+         }
       }
 
       private function specFor(name:String) : Array
