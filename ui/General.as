@@ -17,6 +17,8 @@ package ui
 
       public static const HOLD:String = "zg_set_";
 
+      public static const BUSY:String = "zg_busy";
+
       public static const READ:String =
          "Colours every Zakros UI mod shares. Set them here, press Apply, and the value "
        + "is written into every installed mod that offers it.\n\n"
@@ -138,6 +140,19 @@ package ui
          return type;
       }
 
+      public static function fit(type:String, value:String) : String
+      {
+         if(type == Hub.ALPHA)
+         {
+            return Config.hexa(Config.color(value,0),Config.alpha(value,1));
+         }
+         if(type == Hub.COLOR)
+         {
+            return "#" + Config.hex(Config.color(value,0));
+         }
+         return value;
+      }
+
       private static function params(slot:Object) : String
       {
          var one:Object = slot.sample;
@@ -209,6 +224,7 @@ package ui
          var parts:Array = null;
          var specs:Array = null;
          var one:Object = null;
+         var want:String = null;
          var out:Array = [];
          var i:int = 0;
          var j:int = 0;
@@ -224,9 +240,10 @@ package ui
                while(k < specs.length)
                {
                   one = specs[k];
-                  if(one.key == key && String(one.value) != value)
+                  want = fit(String(one.type),value);
+                  if(one.key == key && String(one.value) != want)
                   {
-                     out.push([String((parts[j] as Object).swf),key,value,
+                     out.push([String((parts[j] as Object).swf),key,want,
                                String(one.value),parts[j],one]);
                   }
                   k++;

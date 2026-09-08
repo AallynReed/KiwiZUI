@@ -119,6 +119,8 @@ package ui
 
       private var saving:Boolean = false;
 
+      private var pending:String = "";
+
       private var span:int;
 
       private var high:int;
@@ -208,6 +210,11 @@ package ui
          var parts:Array = null;
          var title:String = null;
          var record:Object = null;
+         if(name == General.BUSY)
+         {
+            this.pending = value;
+            return true;
+         }
          if(name.substr(0,General.HOLD.length) == General.HOLD)
          {
             this.held[name.substring(General.HOLD.length)] = value;
@@ -371,6 +378,7 @@ package ui
          this.pickScroll = 0;
          this.covered = [];
          this.ticker = host;
+         this.resume();
          while(i < host.numChildren)
          {
             kid = host.getChildAt(i);
@@ -978,6 +986,7 @@ package ui
          var spec:Object = null;
          var specs:Array = (this.mods[General.TITLE][0] as Object).options as Array;
          var lines:Array = [];
+         var doing:Array = [];
          var i:int = 0;
          this.saved = {};
          while(i < specs.length)
@@ -988,13 +997,53 @@ package ui
                                       String(spec.value));
             if(jobs.length > 0)
             {
+               if(this.held[spec.key] != String(spec.value))
+               {
+                  this.held[spec.key] = String(spec.value);
+                  lines.push([Hub.ADDRESS,General.HOLD + spec.key,String(spec.value)]);
+               }
                this.saved[spec.key] = General.pack(jobs);
                lines.push([Hub.ADDRESS,General.MARK + spec.key,this.saved[spec.key]]);
+               doing.push(spec.key);
                this.enqueue(jobs);
             }
             i++;
          }
+         this.pending = doing.join(",");
+         if(doing.length > 0)
+         {
+            lines.unshift([Hub.ADDRESS,General.BUSY,this.pending]);
+         }
          this.work = lines.concat(this.work);
+         this.pump();
+      }
+
+      private function resume() : void
+      {
+         var jobs:Array = null;
+         var keys:Array = null;
+         var key:String = null;
+         var i:int = 0;
+         if(this.pending.length == 0 || this.work.length > 0)
+         {
+            return;
+         }
+         keys = this.pending.split(",");
+         this.saving = true;
+         while(i < keys.length)
+         {
+            key = String(keys[i]);
+            if(this.held[key] != null)
+            {
+               jobs = General.queue(this.mods,this.order,key,String(this.held[key]));
+               if(jobs.length > 0)
+               {
+                  this.enqueue(jobs);
+               }
+            }
+            i++;
+         }
+         this.refit();
          this.pump();
       }
 
@@ -1077,6 +1126,15 @@ package ui
          if(this.ticker != null)
          {
             this.ticker.removeEventListener(Event.ENTER_FRAME,this.pump);
+         }
+         if(this.work.length > 0)
+         {
+            return;
+         }
+         if(this.pending.length > 0)
+         {
+            this.pending = "";
+            Hub.write(Hub.ADDRESS,General.BUSY,"");
          }
          this.saving = false;
          this.refit();
