@@ -34,6 +34,8 @@ package ui
 
       public var driven:Boolean = false;
 
+      public var digits:Boolean = false;
+
       public var clears:String = "";
 
       private var padded:Boolean = false;
@@ -181,7 +183,7 @@ package ui
 
       private function get boxWide() : int
       {
-         var span:int = this.caption == null ? this.w : CTRL;
+         var span:int = this.caption == null ? this.w : this.ctrl;
          return this.key.length > 0 ? span - SET - 4 : span;
       }
 

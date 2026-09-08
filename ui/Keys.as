@@ -9,7 +9,15 @@ package ui
    public class Keys extends Sprite
    {
 
-      private static const ROWS:Array = ["1234567890","QWERTYUIOP","ASDFGHJKL","ZXCVBNM_"];
+      /** Backspace and space are characters in a row like any other, so a layout is its
+       *  four strings and nothing else, and the fourth row carries the three that are not
+       *  letters. The wildcard earns its key beside the underscore: every name pattern in
+       *  this library is a leading `*`, and a pad that cannot type one can only ever write
+       *  a rule matching a whole name exactly. */
+      private static const TEXT:Array = ["1234567890","QWERTYUIOP","ASDFGHJKL\b",
+                                         "ZXCVBNM_* "];
+
+      private static const NUMS:Array = ["123","456","789","0.\b"];
 
       private static const COLS:int = 10;
 
@@ -23,15 +31,9 @@ package ui
 
       private static const SPACE:String = " ";
 
-      private static const BACK_ROW:int = 2;
-
-      private static const SPACE_ROW:int = 3;
-
-      private static const SPACE_COL:int = 8;
-
       public static const W:int = EDGE * 2 + COLS * CELL + (COLS - 1) * GAP;
 
-      public static const H:int = EDGE * 2 + ROWS.length * CELL + (ROWS.length - 1) * GAP;
+      public static const H:int = EDGE * 2 + TEXT.length * CELL + (TEXT.length - 1) * GAP;
 
       private static var one:Keys;
 
@@ -41,6 +43,8 @@ package ui
 
       private var caps:Array = [];
 
+      private var rows:Array = TEXT;
+
       private var hot:int = -1;
 
       public function Keys()
@@ -49,7 +53,7 @@ package ui
          var field:TextField = null;
          var i:int = 0;
          addChild(this.art);
-         while(i < ROWS.length * COLS)
+         while(i < TEXT.length * COLS)
          {
             field = renderer.pin(renderer.label(0,0,11,TextFieldAutoSize.CENTER,"",CELL,CELL),
                                  CELL,11);
@@ -69,6 +73,7 @@ package ui
          }
          box = field;
          one.hot = -1;
+         one.rows = field.digits ? NUMS : TEXT;
          one.paint();
          Layer.show(one,field,0,field.tall + 2);
       }
@@ -91,18 +96,32 @@ package ui
          }
       }
 
-      private static function keyAt(row:int, col:int) : String
+      private function keyAt(row:int, col:int) : String
       {
-         var body:String = String(ROWS[row]);
-         if(col < body.length)
+         var body:String = row < this.rows.length ? String(this.rows[row]) : "";
+         return col < body.length ? body.charAt(col) : "";
+      }
+
+      private function get cols() : int
+      {
+         var most:int = 0;
+         var i:int = 0;
+         while(i < this.rows.length)
          {
-            return body.charAt(col);
+            most = Math.max(most,String(this.rows[i]).length);
+            i++;
          }
-         if(row == BACK_ROW && col == COLS - 1)
-         {
-            return BACK;
-         }
-         return row == SPACE_ROW && col >= SPACE_COL ? SPACE : "";
+         return most;
+      }
+
+      private function get wide() : int
+      {
+         return EDGE * 2 + this.cols * CELL + (this.cols - 1) * GAP;
+      }
+
+      private function get high() : int
+      {
+         return EDGE * 2 + this.rows.length * CELL + (this.rows.length - 1) * GAP;
       }
 
       private static function cellX(col:int) : int
@@ -115,26 +134,17 @@ package ui
          return EDGE + row * (CELL + GAP);
       }
 
-      private static function cellW(what:String) : int
-      {
-         return what == SPACE ? CELL * 2 + GAP : CELL;
-      }
-
       private function spotAt(x:Number, y:Number) : int
       {
          var row:int = int((y - EDGE) / (CELL + GAP));
          var col:int = int((x - EDGE) / (CELL + GAP));
-         var what:String = null;
-         if(x < EDGE || y < EDGE || row < 0 || row >= ROWS.length || col < 0 || col >= COLS)
+         if(x < EDGE || y < EDGE || row < 0 || row >= this.rows.length
+            || col < 0 || col >= this.cols)
          {
             return -1;
          }
-         what = keyAt(row,col);
-         if(what == SPACE)
-         {
-            col = SPACE_COL;
-         }
-         if(what.length == 0 || y >= cellY(row) + CELL || x >= cellX(col) + cellW(what))
+         if(this.keyAt(row,col).length == 0 || y >= cellY(row) + CELL
+            || x >= cellX(col) + CELL)
          {
             return -1;
          }
@@ -145,31 +155,29 @@ package ui
       {
          var what:String = null;
          var spot:int = 0;
-         var wide:int = 0;
          var on:Boolean = false;
          var field:TextField = null;
          var row:int = 0;
          var col:int = 0;
          this.art.graphics.clear();
-         renderer.fill(this.art,0,0,W,H,renderer.RAISED,1);
-         renderer.border(this.art,0,0,W,H,renderer.BORDER,1);
-         while(row < ROWS.length)
+         renderer.fill(this.art,0,0,this.wide,this.high,renderer.RAISED,1);
+         renderer.border(this.art,0,0,this.wide,this.high,renderer.BORDER,1);
+         while(row < TEXT.length)
          {
             col = 0;
             while(col < COLS)
             {
                spot = row * COLS + col;
-               what = keyAt(row,col);
+               what = this.keyAt(row,col);
                field = this.caps[spot] as TextField;
                field.visible = what.length == 1 && what != BACK && what != SPACE;
-               if(what.length == 0 || what == SPACE && col > SPACE_COL)
+               if(what.length == 0)
                {
                   col++;
                   continue;
                }
                on = spot == this.hot;
-               wide = cellW(what);
-               renderer.framed(this.art,cellX(col),cellY(row),wide,CELL,
+               renderer.framed(this.art,cellX(col),cellY(row),CELL,CELL,
                                on ? renderer.RAISED5 : renderer.HEADER,
                                on ? renderer.CYAN : renderer.BORDER,1);
                if(what == BACK)
@@ -178,7 +186,7 @@ package ui
                }
                else if(what == SPACE)
                {
-                  this.bar(cellX(col),cellY(row),wide,on);
+                  this.bar(cellX(col),cellY(row),CELL,on);
                }
                else
                {
@@ -237,7 +245,7 @@ package ui
          {
             return;
          }
-         this.tap(keyAt(int(spot / COLS),spot % COLS));
+         this.tap(this.keyAt(int(spot / COLS),spot % COLS));
       }
 
       private function tap(what:String) : void
