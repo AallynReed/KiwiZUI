@@ -4,6 +4,7 @@ package ui
    import flash.display.Sprite;
    import flash.events.Event;
    import flash.events.MouseEvent;
+   import flash.geom.Point;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
 
@@ -213,6 +214,7 @@ package ui
          this.hex = new Input("hex","",this.content,this.literal);
          this.hex.value = this.literal;
          this.hex.clears = this.preset;
+         this.hex.driven = true;
          this.hex.x = PAD;
          this.hex.y = HEX_Y;
          this.hex.addEventListener(Event.CHANGE,this.onHex);
@@ -220,6 +222,7 @@ package ui
          this.popup.addChild(this.marks);
          this.popup.addChild(this.hex);
          this.field.addEventListener(MouseEvent.MOUSE_DOWN,this.onPress);
+         this.popup.addEventListener(MouseEvent.MOUSE_DOWN,this.onPoint);
          this.popup.addEventListener(Event.REMOVED_FROM_STAGE,this.onClosed);
          this.painted = -1;
          this.barred = -1;
@@ -300,6 +303,15 @@ package ui
          }
          this.hex.paint();
          this.paint();
+      }
+
+      private function onPoint(e:MouseEvent) : void
+      {
+         if(this.hex == null || this.popup.mouseY < HEX_Y)
+         {
+            return;
+         }
+         this.hex.press(new Point(this.popup.mouseX,this.popup.mouseY));
       }
 
       private function inSquare() : Boolean
