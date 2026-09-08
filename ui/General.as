@@ -241,7 +241,7 @@ package ui
                {
                   one = specs[k];
                   want = fit(String(one.type),value);
-                  if(one.key == key && String(one.value) != want)
+                  if(one.key == key && fit(String(one.type),String(one.value)) != want)
                   {
                      out.push([String((parts[j] as Object).swf),key,want,
                                String(one.value),parts[j],one]);

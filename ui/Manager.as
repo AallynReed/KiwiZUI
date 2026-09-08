@@ -121,6 +121,8 @@ package ui
 
       private var pending:String = "";
 
+      private var resumed:Object = {};
+
       private var span:int;
 
       private var high:int;
@@ -1033,8 +1035,9 @@ package ui
          while(i < keys.length)
          {
             key = String(keys[i]);
-            if(this.held[key] != null)
+            if(this.held[key] != null && this.resumed[key] != true)
             {
+               this.resumed[key] = true;
                jobs = General.queue(this.mods,this.order,key,String(this.held[key]));
                if(jobs.length > 0)
                {
