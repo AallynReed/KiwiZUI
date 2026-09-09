@@ -203,7 +203,8 @@ package ui
          var empty:Boolean = this.values.length == 0;
          this.box.graphics.clear();
          renderer.fill(this.box,0,0,this.w,this.tall,renderer.PANEL,0);
-         renderer.framed(this.box,this.lane,mid,CTRL,BOX,renderer.HEADER,edge,1);
+         renderer.framed(this.box,this.lane,mid,this.ctrl,BOX,renderer.HEADER,edge,1);
+         renderer.pin(this.face,this.ctrl - 34,12);
          this.dots(this.w - 11,mid + (BOX >> 1),this.hot ? renderer.CYAN : renderer.LABEL);
          this.captionAt(0,renderer.LABEL);
          this.face.x = this.lane + 8;

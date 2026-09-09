@@ -164,7 +164,7 @@ package ui
 
       private function get bar() : int
       {
-         return CTRL - this.read - GAP;
+         return this.ctrl - this.read - GAP;
       }
 
       private function get slide() : int

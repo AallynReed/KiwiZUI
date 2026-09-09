@@ -149,7 +149,8 @@ package ui
          var edge:uint = this.hot || this.menu != null || this.keyed ? renderer.CYAN : renderer.BORDER;
          this.box.graphics.clear();
          renderer.fill(this.box,0,0,this.w,this.tall,renderer.PANEL,0);
-         renderer.framed(this.box,this.lane,mid,CTRL,BOX,renderer.HEADER,edge,1);
+         renderer.framed(this.box,this.lane,mid,this.ctrl,BOX,renderer.HEADER,edge,1);
+         renderer.pin(this.face,this.ctrl - 34,12);
          this.caret(this.w - 1,mid,this.hot ? renderer.CYAN : renderer.LABEL);
          this.captionAt(0,renderer.LABEL);
          this.face.x = this.lane + 8;
@@ -377,9 +378,9 @@ package ui
          var most:Number = 0;
          var room:int = Layer.roomWide;
          var i:int = 0;
-         if(room <= CTRL)
+         if(room <= this.ctrl)
          {
-            return CTRL;
+            return this.ctrl;
          }
          field = renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",0,20);
          while(i < this.labels.length)
@@ -391,7 +392,7 @@ package ui
             }
             i++;
          }
-         return Config.clamp(Math.ceil(most) + 38,CTRL,room - 8,CTRL);
+         return Config.clamp(Math.ceil(most) + 38,this.ctrl,room - 8,this.ctrl);
       }
 
       private function onTrack(e:MouseEvent) : void

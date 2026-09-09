@@ -70,6 +70,12 @@ package ui
 
       public static const CTRL:int = 150;
 
+      /** How wide this row's control is. One number for every screen made the
+       *  control a fixed strip on the right, so a wide window got a wide empty
+       *  gutter rather than a wider control. Defaults to CTRL, so a row that is
+       *  never told otherwise is exactly what it was. */
+      public var ctrl:int = CTRL;
+
       public var key:String;
 
       public var w:int;
@@ -169,7 +175,7 @@ package ui
 
       public function get lane() : int
       {
-         return this.w - CTRL;
+         return this.w - this.ctrl;
       }
 
       public function announce() : void
