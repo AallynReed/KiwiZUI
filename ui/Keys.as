@@ -10,16 +10,18 @@ package ui
    {
 
       /** Backspace and space are characters in a row like any other, so a layout is its
-       *  four strings and nothing else, and the fourth row carries the three that are not
+       *  four strings and nothing else, and the fourth row carries the four that are not
        *  letters. The wildcard earns its key beside the underscore: every name pattern in
        *  this library is a leading `*`, and a pad that cannot type one can only ever write
-       *  a rule matching a whole name exactly. */
+       *  a rule matching a whole name exactly. The apostrophe is there on the same terms -
+       *  Trove names are full of them, and a pad without one cannot name half the
+       *  game. */
       private static const TEXT:Array = ["1234567890","QWERTYUIOP","ASDFGHJKL\b",
-                                         "ZXCVBNM_* "];
+                                         "ZXCVBNM_*' "];
 
       private static const NUMS:Array = ["123","456","789","0.\b"];
 
-      private static const COLS:int = 10;
+      private static const COLS:int = 11;
 
       private static const CELL:int = 26;
 
