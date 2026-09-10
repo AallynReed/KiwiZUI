@@ -30,6 +30,8 @@ package
 
       private var mirrors:Array = [];
 
+      private var others:Array = [];
+
       private var held:Object = {};
 
       private var loaded:Boolean = false;
@@ -62,6 +64,11 @@ package
       public function mirror(section:String) : void
       {
          this.mirrors.push(section);
+      }
+
+      public function also(section:String) : void
+      {
+         this.others.push(section);
       }
 
       public function note(key:String, value:String = null) : String
@@ -153,6 +160,7 @@ package
 
       public function save(key:String, value:String) : void
       {
+         var out:Array = this.mirrors.concat(this.others);
          var i:int = 0;
          if(!IggyFunctions.inIggy)
          {
@@ -160,9 +168,9 @@ package
          }
          this.mine[key.toLowerCase()] = value == null ? "" : String(value);
          ExternalInterface.call("UIComponent.OnSaveConfig",this.name,key,value);
-         while(i < this.mirrors.length)
+         while(i < out.length)
          {
-            ExternalInterface.call("UIComponent.OnSaveConfig",String(this.mirrors[i]),key,value);
+            ExternalInterface.call("UIComponent.OnSaveConfig",String(out[i]),key,value);
             i++;
          }
       }
