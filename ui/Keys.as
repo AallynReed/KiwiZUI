@@ -10,14 +10,17 @@ package ui
    {
 
       /** Backspace and space are characters in a row like any other, so a layout is its
-       *  four strings and nothing else, and the fourth row carries the four that are not
-       *  letters. The wildcard earns its key beside the underscore: every name pattern in
-       *  this library is a leading `*`, and a pad that cannot type one can only ever write
-       *  a rule matching a whole name exactly. The apostrophe is there on the same terms -
-       *  Trove names are full of them, and a pad without one cannot name half the
-       *  game. */
-      private static const TEXT:Array = ["1234567890","QWERTYUIOP","ASDFGHJKL\b",
-                                         "ZXCVBNM_*' "];
+       *  four strings and nothing else. Forty-four keys in eleven columns is the grid
+       *  exactly filled, and each of the six that is neither a letter nor a digit sits
+       *  where a keyboard puts it: the hyphen after the nought, the colon after the L, the
+       *  comma after the M. The apostrophe is the one that cannot - the corner it belongs
+       *  in is the backspace's - so it ends the top letter row instead.
+       *
+       *  The punctuation earns its keys on names alone. The wildcard is ours, every name
+       *  pattern in this library being a leading `*`, and the underscore is Trove account
+       *  names; the rest are the game's own item names, which are full of all four. */
+      private static const TEXT:Array = ["1234567890-","QWERTYUIOP'","ASDFGHJKL:\b",
+                                         "ZXCVBNM,_* "];
 
       private static const NUMS:Array = ["123","456","789","0.\b"];
 
