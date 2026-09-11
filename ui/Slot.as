@@ -657,7 +657,10 @@ package ui
          {
             return;
          }
-         ExternalInterface.call("SLOT.POINTER_ENTER",this.slotId,corner.x,corner.y);
+         if(this.slotId != null)
+         {
+            ExternalInterface.call("SLOT.POINTER_ENTER",this.slotId,corner.x,corner.y);
+         }
          if(this.tooltipName.length > 0 || this.tooltipDescription.length > 0)
          {
             top = beside != null ? beside : localToGlobal(new Point(this.width / 2,0));
@@ -672,7 +675,10 @@ package ui
          if(IggyFunctions.inIggy)
          {
             ExternalInterface.call("TOOLTIP.HIDE");
-            ExternalInterface.call("SLOT.POINTER_LEAVE",this.slotId);
+            if(this.slotId != null)
+            {
+               ExternalInterface.call("SLOT.POINTER_LEAVE",this.slotId);
+            }
          }
       }
    }
