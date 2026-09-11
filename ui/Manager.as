@@ -605,6 +605,8 @@ package ui
                                String(spec.prompt).length > 0 ? String(spec.prompt) : List.PROMPT);
             case Hub.HEADING:
                return new Heading(String(spec.label),w);
+            case Hub.NOTE:
+               return new Note(String(spec.label),w);
             case Hub.ACT:
                return new Act(String(spec.key),String(spec.label),w);
          }

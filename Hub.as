@@ -36,6 +36,8 @@ package
 
       public static const HEADING:String = "heading";
 
+      public static const NOTE:String = "note";
+
       public static const ACT:String = "act";
 
       private static const SETTLE:int = 2000;

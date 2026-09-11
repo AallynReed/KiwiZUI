@@ -53,6 +53,10 @@ package
 
       private var panelColor:AlphaPicker = new AlphaPicker("panel","Panel color",COL);
 
+      private var note:Note = new Note("Run /mapautoclose off in chat. Trove closes "
+                                     + "the map when you walk, and that command is "
+                                     + "what turns it off.",COL);
+
       private var push:Button = new Button(120,30,13,"PUSH");
 
       private var latch:Button = new Button(120,30,13,"LATCH",Button.LATCH);
@@ -126,6 +130,7 @@ package
          addChild(this.warn);
          addChild(this.accent);
          addChild(this.panelColor);
+         addChild(this.note);
          addChild(this.push);
          addChild(this.latch);
          addChild(this.bar);
@@ -196,6 +201,9 @@ package
          this.bar.y = HEAD + 258;
 
          this.head("TABS",RIGHT,HEAD + 296);
+
+         this.head("NOTE",RIGHT,HEAD + 372);
+         this.place(this.note,RIGHT,HEAD + 394);
       }
    }
 }
