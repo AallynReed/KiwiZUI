@@ -36,6 +36,8 @@ package ui
 
       private static const SPACE:String = " ";
 
+      private static const MORE:String = "›";
+
       public static const W:int = EDGE * 2 + COLS * CELL + (COLS - 1) * GAP;
 
       public static const H:int = EDGE * 2 + TEXT.length * CELL + (TEXT.length - 1) * GAP;
@@ -43,6 +45,12 @@ package ui
       private static var one:Keys;
 
       private static var box:Input;
+
+      private static var other:Array = null;
+
+      private static var reading:Function = null;
+
+      private static var opening:Function = null;
 
       private var art:Shape = new Shape();
 
@@ -52,13 +60,19 @@ package ui
 
       private var hot:int = -1;
 
+      private var sound:String = "";
+
+      private var page:int = 0;
+
+      private var anchor:int = 0;
+
       public function Keys()
       {
          super();
          var field:TextField = null;
          var i:int = 0;
          addChild(this.art);
-         while(i < TEXT.length * COLS)
+         while(i < (TEXT.length + 1) * COLS)
          {
             field = renderer.pin(renderer.label(0,0,11,TextFieldAutoSize.CENTER,"",CELL,CELL),
                                  CELL,11);
@@ -70,6 +84,23 @@ package ui
          addEventListener(MouseEvent.CLICK,this.onClick);
       }
 
+      /** The second layout, handed in rather than held here.
+       *
+       *  A Zhuyin pad is thirty-seven symbols and a table of every character they spell,
+       *  and that table is the size of the language it is for. Keeping it in this library
+       *  would put it in every screen that owns a text box, whether or not the player reads
+       *  Chinese. So the host passes its own rows and its own lookup, and a screen that
+       *  never calls this compiles none of it.
+       *
+       *  Digits are never composed - a quantity has no candidates - so the number pad is
+       *  what it always was whichever layout is set. */
+      public static function offer(rows:Array, lookup:Function, partial:Function) : void
+      {
+         other = rows;
+         reading = lookup;
+         opening = partial;
+      }
+
       public static function beside(field:Input) : void
       {
          if(one == null)
@@ -78,7 +109,10 @@ package ui
          }
          box = field;
          one.hot = -1;
-         one.rows = field.digits ? NUMS : TEXT;
+         one.sound = "";
+         one.page = 0;
+         one.anchor = field.value.length;
+         one.rows = field.digits ? NUMS : (other == null ? TEXT : other);
          one.paint();
          Layer.show(one,field,0,field.tall + 2);
       }
@@ -101,9 +135,40 @@ package ui
          }
       }
 
+      /** Whether this pad composes before it types. True only for the handed-in layout, so
+       *  the strip of candidates is drawn for that and never over the letters. */
+      private function get composing() : Boolean
+      {
+         return this.rows == other && reading != null && opening != null;
+      }
+
+      /** What the symbols tapped so far spell, and nothing while nothing is spelt. The
+       *  lookup is the host's, so this class knows the shape of a candidate list and not
+       *  one character of what is in it. */
+      private function get found() : String
+      {
+         return this.sound.length == 0 ? "" : String(reading(this.sound));
+      }
+
+      private function get band() : int
+      {
+         return this.composing ? 1 : 0;
+      }
+
       private function keyAt(row:int, col:int) : String
       {
-         var body:String = row < this.rows.length ? String(this.rows[row]) : "";
+         var body:String = null;
+         var kids:String = null;
+         if(row < this.band)
+         {
+            kids = this.found;
+            if(kids.length > COLS && col == COLS - 1)
+            {
+               return MORE;
+            }
+            return this.page + col < kids.length ? kids.charAt(this.page + col) : "";
+         }
+         body = row - this.band < this.rows.length ? String(this.rows[row - this.band]) : "";
          return col < body.length ? body.charAt(col) : "";
       }
 
@@ -119,6 +184,11 @@ package ui
          return most;
       }
 
+      private function get bands() : int
+      {
+         return this.rows.length + this.band;
+      }
+
       private function get wide() : int
       {
          return EDGE * 2 + this.cols * CELL + (this.cols - 1) * GAP;
@@ -126,7 +196,7 @@ package ui
 
       private function get high() : int
       {
-         return EDGE * 2 + this.rows.length * CELL + (this.rows.length - 1) * GAP;
+         return EDGE * 2 + this.bands * CELL + (this.bands - 1) * GAP;
       }
 
       private static function cellX(col:int) : int
@@ -143,8 +213,8 @@ package ui
       {
          var row:int = int((y - EDGE) / (CELL + GAP));
          var col:int = int((x - EDGE) / (CELL + GAP));
-         if(x < EDGE || y < EDGE || row < 0 || row >= this.rows.length
-            || col < 0 || col >= this.cols)
+         if(x < EDGE || y < EDGE || row < 0 || row >= this.bands
+            || col < 0 || col >= COLS)
          {
             return -1;
          }
@@ -167,7 +237,7 @@ package ui
          this.art.graphics.clear();
          renderer.fill(this.art,0,0,this.wide,this.high,renderer.RAISED,1);
          renderer.border(this.art,0,0,this.wide,this.high,renderer.BORDER,1);
-         while(row < TEXT.length)
+         while(row < this.bands)
          {
             col = 0;
             while(col < COLS)
@@ -198,13 +268,23 @@ package ui
                   field.x = cellX(col);
                   renderer.say(field,what);
                   field.setTextFormat(field.defaultTextFormat);
-                  field.textColor = on ? renderer.VALUE : renderer.LABEL;
+                  field.textColor = on ? renderer.VALUE
+                                       : (row < this.band ? renderer.VALUE : renderer.LABEL);
                   renderer.centre(field,cellY(row),CELL);
                }
                col++;
             }
             row++;
          }
+      }
+
+      /** The sound so far, written into the box where it is being typed and replaced by the
+       *  character that is chosen. That is what `compose` is for - it is the same call the
+       *  engine's own composition arrives through - and it puts the half-spelt syllable
+       *  where the player is already looking rather than in a corner of the pad. */
+      private function said(body:String) : void
+      {
+         box.compose(this.anchor,this.sound.length,body);
       }
 
       private function rub(x:int, y:int, on:Boolean) : void
@@ -250,21 +330,91 @@ package ui
          {
             return;
          }
+         if(spot < COLS && this.band > 0)
+         {
+            this.pick(this.keyAt(0,spot));
+            return;
+         }
          this.tap(this.keyAt(int(spot / COLS),spot % COLS));
       }
 
+      /** A candidate is the whole of what gets typed, and the sound that found it is spent.
+       *  The pager is the one key on that row that is not a character. */
+      private function pick(what:String) : void
+      {
+         if(what.length == 0)
+         {
+            return;
+         }
+         if(what == MORE)
+         {
+            this.page += COLS - 1;
+            if(this.page >= this.found.length)
+            {
+               this.page = 0;
+            }
+            Option.click();
+            this.paint();
+            return;
+         }
+         Option.click();
+         this.said(what);
+         this.sound = "";
+         this.anchor = box.value.length;
+         this.page = 0;
+         this.paint();
+      }
+
+      /** Backspace unspells before it deletes, and space commits the first candidate.
+       *
+       *  A tone that finds nothing is not taken. Half the point of the strip is that it
+       *  says what a syllable spells as it is spelt, and a pad that accepts a mark leading
+       *  nowhere leaves the player reading an empty row with no way to tell which tap was
+       *  the wrong one. */
       private function tap(what:String) : void
       {
          var held:int = box.value.length;
+         var next:String = null;
+         if(this.composing && what != BACK && what != SPACE)
+         {
+            next = this.sound + what;
+            if(opening(next) != true)
+            {
+               Option.click(false);
+               return;
+            }
+            Option.click();
+            this.said(next);
+            this.sound = next;
+            this.page = 0;
+            this.paint();
+            return;
+         }
+         if(this.composing && this.sound.length > 0)
+         {
+            if(what == SPACE)
+            {
+               this.pick(this.found.charAt(0));
+               return;
+            }
+            Option.click();
+            this.said(this.sound.substring(0,this.sound.length - 1));
+            this.sound = this.sound.substring(0,this.sound.length - 1);
+            this.page = 0;
+            this.paint();
+            return;
+         }
          Option.click(what != BACK || held > 0);
          if(what != BACK)
          {
-            box.compose(held,0,what.toLowerCase());
+            box.compose(held,0,this.composing ? what : what.toLowerCase());
+            this.anchor = box.value.length;
             return;
          }
          if(held > 0)
          {
             box.compose(held - 1,1,"");
+            this.anchor = box.value.length;
          }
       }
    }
