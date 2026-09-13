@@ -92,6 +92,12 @@ package
 
       public static var MARK:Array = null;
 
+      private static const STAMPED:Array = [];
+
+      private static const PRUNE_FLOOR:int = 2048;
+
+      private static var pruneAt:int = 0;
+
       public static var RING:int = 0;
 
       public static var INK:uint = 0;
@@ -320,8 +326,31 @@ package
       public static function stamp(field:TextField, own:Array = null) : TextField
       {
          var base:Array = own == null ? [SHADOW] : own;
+         STAMPED.push(field,base);
+         if(pruneAt > 0 && STAMPED.length >= pruneAt)
+         {
+            prune();
+         }
          field.filters = MARK == null ? base : MARK;
          return field;
+      }
+
+      private static function prune() : void
+      {
+         var kept:int = 0;
+         var i:int = 0;
+         while(i < STAMPED.length)
+         {
+            if(TextField(STAMPED[i]).stage != null)
+            {
+               STAMPED[kept] = STAMPED[i];
+               STAMPED[kept + 1] = STAMPED[i + 1];
+               kept += 2;
+            }
+            i += 2;
+         }
+         STAMPED.length = kept;
+         pruneAt = Math.max(PRUNE_FLOOR,kept * 2);
       }
 
       public static function say(field:TextField, body:String) : TextField
@@ -336,9 +365,24 @@ package
 
       private static function remark() : void
       {
+         var was:Array = MARK;
+         var i:int = 0;
          MARK = RING <= 0
               ? null
               : [new GlowFilter(INK,1,RING * 2,RING * 2,PUSH,BitmapFilterQuality.MEDIUM)];
+         if(pruneAt == 0)
+         {
+            pruneAt = PRUNE_FLOOR;
+         }
+         if(was == null && MARK == null)
+         {
+            return;
+         }
+         while(i < STAMPED.length)
+         {
+            TextField(STAMPED[i]).filters = MARK == null ? STAMPED[i + 1] : MARK;
+            i += 2;
+         }
       }
 
       public static function bindIcon(image:Bitmap, texture:String, size:int) : Boolean

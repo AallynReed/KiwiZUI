@@ -108,9 +108,12 @@ was stamped with, and putting the outline away restores it. That is why the base
 kept per field rather than one for the suite: the three in use disagree, and a single
 default would flatten two of them.
 
-Fields stamped before the player turns it on are reached as well - `stamp()` records them
-in a weak-keyed `Dictionary`, so a row built for a list that has since been discarded goes
-with it. Anything built afterwards is stamped as it is made.
+Fields stamped before the player turns it on are reached as well - `stamp()` records each
+one with its baseline in a plain array, and a change to the outline walks it. Nothing is
+recorded weakly: a weak-keyed table growing in a burst crashes Iggy's collector. Once the
+first config has arrived, the array drops fields that are no longer on a stage each time it
+doubles, so a row built for a list that has since been discarded does not outlive the next
+prune. Anything built afterwards is stamped as it is made.
 
 **A field with a deliberate filter of its own stays out of it.** World Tooltip's purple
 glow on a biome name and Marketplace's two-directional stamp are not readability halos and
