@@ -9,7 +9,6 @@ package
    import flash.filters.DropShadowFilter;
    import flash.filters.GlowFilter;
    import flash.geom.Matrix;
-   import flash.utils.Dictionary;
    import flash.text.TextField;
    import flash.text.TextFieldAutoSize;
    import flash.text.TextFormat;
@@ -92,8 +91,6 @@ package
       private static const PUSH:Number = 12;
 
       public static var MARK:Array = null;
-
-      private static const STAMPED:Dictionary = new Dictionary(true);
 
       public static var RING:int = 0;
 
@@ -323,7 +320,6 @@ package
       public static function stamp(field:TextField, own:Array = null) : TextField
       {
          var base:Array = own == null ? [SHADOW] : own;
-         STAMPED[field] = base;
          field.filters = MARK == null ? base : MARK;
          return field;
       }
@@ -340,14 +336,9 @@ package
 
       private static function remark() : void
       {
-         var field:Object = null;
          MARK = RING <= 0
               ? null
               : [new GlowFilter(INK,1,RING * 2,RING * 2,PUSH,BitmapFilterQuality.MEDIUM)];
-         for(field in STAMPED)
-         {
-            TextField(field).filters = MARK == null ? STAMPED[field] : MARK;
-         }
       }
 
       public static function bindIcon(image:Bitmap, texture:String, size:int) : Boolean
