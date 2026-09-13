@@ -30,6 +30,8 @@ package ui
 
       private var committed:String = "";
 
+      private var seen:String = "";
+
       private var hot:Boolean = false;
 
       public var driven:Boolean = false;
@@ -50,6 +52,7 @@ package ui
          this.field.selectable = true;
          this.field.mouseEnabled = true;
          this.field.addEventListener(Event.CHANGE,this.onEdit);
+         this.field.addEventListener(FocusEvent.FOCUS_IN,this.onEnter);
          this.field.addEventListener(FocusEvent.FOCUS_OUT,this.onLeave);
          this.field.addEventListener(KeyboardEvent.KEY_DOWN,this.onKey);
          addChild(this.field);
@@ -139,6 +142,7 @@ package ui
       {
          renderer.say(this.field,body);
          this.committed = this.field.text;
+         this.seen = this.field.text;
       }
 
       override public function get literal() : String
@@ -322,6 +326,7 @@ package ui
 
       private function report(now:Boolean = false) : void
       {
+         this.seen = this.field.text;
          dispatchEvent(new Event(TYPING));
          if(this.key.length == 0 || now)
          {
@@ -336,8 +341,24 @@ package ui
          this.commit();
       }
 
+      private function onEnter(e:FocusEvent) : void
+      {
+         this.seen = this.field.text;
+         addEventListener(Event.ENTER_FRAME,this.onWatch);
+      }
+
+      private function onWatch(e:Event) : void
+      {
+         if(this.field.text != this.seen)
+         {
+            this.paint();
+            this.report();
+         }
+      }
+
       private function onLeave(e:FocusEvent) : void
       {
+         removeEventListener(Event.ENTER_FRAME,this.onWatch);
          this.commit();
       }
 
