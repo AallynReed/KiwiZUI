@@ -169,9 +169,9 @@ package
 
       public static function stampy(utc:Number) : Object
       {
-         var period:Number = 1209600000;
+         var period:Number = 604800000;
          var duration:Number = 172800000;
-         var base:Number = 1695639600000;
+         var base:Number = 1696071600000;
          var k:Number = floorDiv(utc - base,period);
          var start:Number = base + k * period;
          var end:Number = start + duration;
