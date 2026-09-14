@@ -10,7 +10,7 @@ package ui
    {
 
       /** Backspace and space are characters in a row like any other, so a layout is its
-       *  four strings and nothing else. Forty-four keys in eleven columns is the grid
+       *  four rows and nothing else. Forty-four keys in eleven columns is the grid
        *  exactly filled, and each of the six that is neither a letter nor a digit sits
        *  where a keyboard puts it: the hyphen after the nought, the colon after the L, the
        *  comma after the M. The apostrophe is the one that cannot - the corner it belongs
@@ -19,12 +19,17 @@ package ui
        *  The punctuation earns its keys on names alone. The wildcard is ours, every name
        *  pattern in this library being a leading `*`, and the underscore is Trove account
        *  names; the rest are the game's own item names, which are full of all four. */
-      private static const TEXT:Array = ["1234567890-","QWERTYUIOP'","ASDFGHJKL:\b",
-                                         "ZXCVBNM,_* "];
+      private static const TEXT:Array = [["1","2","3","4","5","6","7","8","9","0","-"],
+                                         ["Q","W","E","R","T","Y","U","I","O","P","'"],
+                                         ["A","S","D","F","G","H","J","K","L",":","\b"],
+                                         ["Z","X","C","V","B","N","M",",","_","*"," "]];
 
-      private static const NUMS:Array = ["123","456","789","0.\b"];
+      private static const NUMS:Array = [["1","2","3"],["4","5","6"],["7","8","9"],
+                                         ["0",".","\b"]];
 
       private static const COLS:int = 11;
+
+      private static const DIGITS:int = 3;
 
       private static const CELL:int = 26;
 
@@ -57,6 +62,8 @@ package ui
       private var caps:Array = [];
 
       private var rows:Array = TEXT;
+
+      private var cols:int = COLS;
 
       private var hot:int = -1;
 
@@ -113,6 +120,7 @@ package ui
          one.page = 0;
          one.anchor = field.value.length;
          one.rows = field.digits ? NUMS : (other == null ? TEXT : other);
+         one.cols = field.digits ? DIGITS : COLS;
          one.paint();
          Layer.show(one,field,0,field.tall + 2);
       }
@@ -157,7 +165,7 @@ package ui
 
       private function keyAt(row:int, col:int) : String
       {
-         var body:String = null;
+         var keys:Array = null;
          var kids:String = null;
          if(row < this.band)
          {
@@ -168,20 +176,8 @@ package ui
             }
             return this.page + col < kids.length ? kids.charAt(this.page + col) : "";
          }
-         body = row - this.band < this.rows.length ? String(this.rows[row - this.band]) : "";
-         return col < body.length ? body.charAt(col) : "";
-      }
-
-      private function get cols() : int
-      {
-         var most:int = 0;
-         var i:int = 0;
-         while(i < this.rows.length)
-         {
-            most = Math.max(most,String(this.rows[i]).length);
-            i++;
-         }
-         return most;
+         keys = row - this.band < this.rows.length ? this.rows[row - this.band] : [];
+         return col < keys.length ? keys[col] : "";
       }
 
       private function get bands() : int

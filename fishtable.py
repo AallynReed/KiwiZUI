@@ -160,7 +160,7 @@ def number(text: str) -> float | None:
         return None
 
 
-def build() -> tuple[list[str], list[str], list[str], list[str], list[str]]:
+def build() -> tuple[list[list], list[str], list[str], list[str], list[tuple[str, int]]]:
     names = game_names()
     by_name: dict[str, list[str]] = {}
     for key, value in names.items():
@@ -171,7 +171,7 @@ def build() -> tuple[list[str], list[str], list[str], list[str], list[str]]:
     liquids: list[str] = []
     pools: list[str] = []
     poles: list[str] = []
-    rows: list[str] = []
+    rows: list[list] = []
 
     def slot(table: list[str], value: str) -> int:
         if value not in table:
@@ -201,25 +201,34 @@ def build() -> tuple[list[str], list[str], list[str], list[str], list[str]]:
             raise SystemExit(f"{name!r} is {weight} but used to weigh {was_low}-{was_high}, "
                              f"not {WAS[weight]}")
 
-        rows.append("|".join([keys[0], str(RARITY.index(rarity)),
-                              str(WEIGHT.index(weight)), str(slot(liquids, liquid)),
-                              str(slot(pools, pool)), str(slot(poles, pole)),
-                              "1" if old else "0", r[10], r[11]]))
+        rows.append([keys[0], RARITY.index(rarity), WEIGHT.index(weight),
+                     slot(liquids, liquid), slot(pools, pool), slot(poles, pole),
+                     old, r[10], r[11]])
 
-    at = {row.split("|")[0]: i for i, row in enumerate(rows)}
+    at = {row[0]: i for i, row in enumerate(rows)}
     orphans = sorted(stem for stem, key in owner.items() if key not in at)
     if orphans:
         print(f"  {len(orphans)} trophies name a fish the sheet does not list, skipped: "
               + ", ".join(orphans))
-    mounted = sorted(f"{stem}|{at[key]}|{trophies_by_stem[stem][1]}"
-                     for stem, key in owner.items() if key in at)
+    mounted = [(f"{TROPHY}{stem}_{tier}{TAILS[trophies_by_stem[stem][1]]}", at[owner[stem]])
+               for stem in sorted(owner) if owner[stem] in at for tier in TIERS]
     return rows, liquids, pools, poles, mounted
 
 
-def quoted(values: list[str], indent: str) -> str:
+def literal(value: str | int | bool | list | tuple) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, (list, tuple)):
+        return "[" + ",".join(literal(v) for v in value) + "]"
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def quoted(values: list, indent: str) -> str:
     out, line = [], indent
     for i, value in enumerate(values):
-        piece = '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+        piece = literal(value)
         if i < len(values) - 1:
             piece += ","
         if len(line) + len(piece) > 96 and line.strip():
@@ -242,12 +251,6 @@ HEAD = '''package
       public static const RARE:int = 2;
 
       public static const MASTERY:Array = [5,15,25];
-
-      private static const TROPHY:String = "$prefabs_placeable_deco_trophy_fish_";
-
-      private static const TIERS:Array = ["basic","silver","gold"];
-
-      private static const TAILS:Array = ["_item_name","_name"];
 
       private static var words:Array = null;
 
@@ -498,37 +501,27 @@ TAIL = '''
       {
          var out:Object = {};
          var made:Array = [];
-         var row:String = null;
-         var parts:Array = null;
+         var row:Array = null;
          var fish:Fish = null;
-         var tier:String = null;
-         var tail:String = null;
          var found:int = 0;
          for each(row in TABLE)
          {
-            parts = row.split("|");
             fish = new Fish();
-            fish.key = parts[0];
-            fish.rarity = int(parts[1]);
-            fish.weight = int(parts[2]);
-            fish.liquid = LIQUID[int(parts[3])];
-            fish.pool = POOL[int(parts[4])];
-            fish.pole = POLE[int(parts[5])];
-            fish.aged = parts[6] == "1";
-            fish.hint = parts[7];
-            fish.note = parts[8];
+            fish.key = row[0];
+            fish.rarity = row[1];
+            fish.weight = row[2];
+            fish.liquid = LIQUID[row[3]];
+            fish.pool = POOL[row[4]];
+            fish.pole = POLE[row[5]];
+            fish.aged = row[6];
+            fish.hint = row[7];
+            fish.note = row[8];
             made.push(fish);
             found += put(out,fish.key,fish);
          }
          for each(row in MOUNTED)
          {
-            parts = row.split("|");
-            fish = made[int(parts[1])] as Fish;
-            tail = String(TAILS[int(parts[2])]);
-            for each(tier in TIERS)
-            {
-               put(out,TROPHY + parts[0] + "_" + tier + tail,fish);
-            }
+            put(out,row[0],made[row[1]] as Fish);
          }
          return found == 0 ? null : out;
       }
@@ -566,7 +559,17 @@ TAIL = '''
 
 PLAIN, LEAST, RECORD, HAIR, WHOLE, NOTHING = range(6)
 
-STRING = re.compile(r'"((?:[^"\\]|\\.)*)"')
+QUOTED = r'"((?:[^"\\]|\\.)*)"'
+STRING = re.compile(QUOTED)
+COMMA = r"\s*,\s*"
+ROW = re.compile(r"\[\s*" + COMMA.join([QUOTED] + [r"(\d+)"] * 5 + [r"(true|false)", QUOTED, QUOTED])
+                 + r"\s*\]")
+MOUNT = re.compile(r'\[\s*"(\$prefabs_placeable_deco_trophy_fish_[A-Za-z0-9_]+)"' + COMMA
+                   + r"(\d+)\s*\]")
+
+
+def unescaped(text: str) -> str:
+    return text.replace('\\"', '"').replace("\\\\", "\\")
 
 
 def strings(body: str) -> list[str]:
@@ -575,7 +578,7 @@ def strings(body: str) -> list[str]:
     A literal quote has to be read back as one rather than as the end of the string:
     a hint that names an event in quotes would otherwise split into three, and the row
     counts that guard the table would be counting fragments."""
-    return [s.replace('\\"', '"').replace("\\\\", "\\") for s in STRING.findall(body)]
+    return [unescaped(s) for s in STRING.findall(body)]
 
 
 def array(src: str, name: str, where: str) -> list[str]:
@@ -585,23 +588,25 @@ def array(src: str, name: str, where: str) -> list[str]:
     return strings(block.group(1))
 
 
+def table(src: str) -> list[list]:
+    """TABLE's rows as the literals they are: strings unescaped, numbers and flags typed."""
+    return [[unescaped(p[0]), *map(int, p[1:6]), p[6] == "true", unescaped(p[7]),
+             unescaped(p[8])] for p in ROW.findall(src)]
+
+
+def mounted(src: str) -> list[tuple[str, int]]:
+    """MOUNTED's trophy keys, each with the row of TABLE it names."""
+    return [(key, int(at)) for key, at in MOUNT.findall(src)]
+
+
 def parse() -> list[dict]:
     """The shipped Fish.as read back as data, so what is checked is the table that is
     actually compiled in rather than what the generator meant to write."""
     src = OUT.read_text(encoding="utf-8")
-
-    def table(name: str) -> list[str]:
-        return array(src, name, "Fish.as")
-
-    liquids, pools, poles = table("LIQUID"), table("POOL"), table("POLE")
-    out = []
-    for row in table("TABLE"):
-        p = row.split("|")
-        out.append({"key": p[0], "rarity": int(p[1]), "weight": int(p[2]),
-                    "liquid": liquids[int(p[3])], "pool": pools[int(p[4])],
-                    "pole": poles[int(p[5])], "aged": p[6] == "1",
-                    "hint": p[7], "note": p[8]})
-    return out
+    liquids, pools, poles = (array(src, name, "Fish.as") for name in ("LIQUID", "POOL", "POLE"))
+    return [{"key": p[0], "rarity": p[1], "weight": p[2], "liquid": liquids[p[3]],
+             "pool": pools[p[4]], "pole": poles[p[5]], "aged": p[6], "hint": p[7],
+             "note": p[8]} for p in table(src)]
 
 
 def near(a: float, b: float) -> bool:
@@ -645,34 +650,32 @@ def verify_built(built: str) -> None:
         got = [float(n) for n in found.group(1).split(",")]
         if got != want:
             raise SystemExit(f"the build's {name} is {got}, expected {want}")
-    rows = len(re.findall(r'"\$prefabs_[A-Za-z0-9_]+\|', built))
+    rows = len(table(built))
     if rows != len(parse()):
         raise SystemExit(f"the build carries {rows} fish, the table has {len(parse())}")
-    mounted = trophies(built)
-    if len(mounted) != rows:
-        raise SystemExit(f"the build carries {len(mounted)} trophy stems for {rows} fish")
-    print(f"  fish: {rows} species and {len(mounted) * len(TIERS)} trophy names in the "
+    names = trophies(built)
+    if len(names) != rows * len(TIERS) or any(at >= rows for _, at in names):
+        raise SystemExit(f"the build carries {len(names)} trophy names for {rows} fish")
+    print(f"  fish: {rows} species and {len(names)} trophy names in the "
           f"build, all four bands intact")
 
 
-def trophies(built: str) -> list[str]:
-    """The trophy stems in the build, checked against the language files.
+def trophies(built: str) -> list[tuple[str, int]]:
+    """The trophy keys in the build, checked against the language files.
 
     A mounted trophy carries its own name - "Gold Jumping Jadefin Trophy" - so the fish
-    it belongs to is found through the trophy's key and not the fish's. A stem that named
+    it belongs to is found through the trophy's key and not the fish's. A key that named
     nothing would be a fish whose trophy is invisible to the tooltip, which is exactly the
     bug this table was added to fix and exactly as silent."""
-    stems = [row.split("|") for row in array(built, "MOUNTED", "the build")]
+    names = mounted(built)
     have: set[bytes] = set()
     for path in sorted(Path(r"E:\Trove\languages\en").glob("prefabs_placeable_deco*.binfab")):
         have |= set(re.findall(rb"\$[A-Za-z0-9_]+", path.read_bytes()))
-    missing = [f"{TROPHY}{s[0]}_{t}{TAILS[int(s[2])]}"
-               for s in stems for t in TIERS
-               if f"{TROPHY}{s[0]}_{t}{TAILS[int(s[2])]}".encode() not in have]
+    missing = [key for key, _ in names if key.encode() not in have]
     if missing:
         raise SystemExit(f"{len(missing)} trophy names are in no language file: "
                          + ", ".join(missing[:5]))
-    return stems
+    return names
 
 
 def check() -> None:

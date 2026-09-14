@@ -49,6 +49,10 @@ package ui
       public static const ORDER:Array = ["panel","accent","label","value","outline",
                                          "outlinecolor"];
 
+      public static const KEYS:Array = ["panel","accent","label","value","outline","outlinecolor",
+                                        "red","danger","orange","yellow","green","purple","water",
+                                        "air","fire","cosmic","statlight"];
+
       public function General()
       {
          super();
@@ -60,12 +64,11 @@ package ui
          var slot:Object = null;
          var key:String = null;
          var specs:Array = [];
-         var wanted:Array = keys();
          var seen:Object = tally(mods,order);
          var i:int = 0;
-         while(i < wanted.length)
+         while(i < KEYS.length)
          {
-            key = String(wanted[i]);
+            key = String(KEYS[i]);
             slot = seen[key];
             if(slot != null && int(slot.mods) >= 2)
             {
@@ -90,23 +93,6 @@ package ui
                              "Puts every mod back to what it held before the last Apply."));
          return {"swf":"","title":TITLE,"group":GROUP,"readme":READ,
                  "options":specs,"id":ID,"raw":""};
-      }
-
-      public static function keys() : Array
-      {
-         var key:String = null;
-         var out:Array = ORDER.slice();
-         var i:int = 0;
-         while(i < renderer.KEYS.length)
-         {
-            key = String(renderer.KEYS[i]);
-            if(out.indexOf(key) < 0)
-            {
-               out.push(key);
-            }
-            i++;
-         }
-         return out;
       }
 
       private static function named(key:String) : String

@@ -192,15 +192,12 @@ package
          return whole + ":" + (m < 10 ? "0" + m : String(m));
       }
 
-      private static function units() : Array
-      {
-         return [{"key":"$TimeUnit_Years",   "ms":31536000000},
-                 {"key":"$TimeUnit_Months",  "ms":2628000000},
-                 {"key":"$TimeUnit_Days",    "ms":86400000},
-                 {"key":"$TimeUnit_Hours",   "ms":3600000},
-                 {"key":"$TimeUnit_Minutes", "ms":60000},
-                 {"key":"$TimeUnit_Seconds", "ms":1000}];
-      }
+      private static const UNITS:Array = [{"key":"$TimeUnit_Years",   "ms":31536000000},
+                                          {"key":"$TimeUnit_Months",  "ms":2628000000},
+                                          {"key":"$TimeUnit_Days",    "ms":86400000},
+                                          {"key":"$TimeUnit_Hours",   "ms":3600000},
+                                          {"key":"$TimeUnit_Minutes", "ms":60000},
+                                          {"key":"$TimeUnit_Seconds", "ms":1000}];
 
       private static function plain(parts:Array) : String
       {
@@ -219,17 +216,16 @@ package
          var size:Number = NaN;
          var key:String = null;
          var value:Number = NaN;
-         var table:Array = units();
          var left:Number = Math.abs(ms);
          var out:Array = [];
          var i:int = 0;
-         while(i < table.length && out.length < count)
+         while(i < UNITS.length && out.length < count)
          {
-            size = Number(table[i].ms);
+            size = Number(UNITS[i].ms);
             if(left > size)
             {
                value = count == 1 ? Math.round(left / size) : Math.floor(left / size);
-               key = String(table[i].key) + (short ? "_short" : value == 1 ? "_single" : "");
+               key = String(UNITS[i].key) +(short ? "_short" : value == 1 ? "_single" : "");
                out.push({"value":String(value),"units":IggyFunctions.translate(key)});
             }
             if(left != size)
