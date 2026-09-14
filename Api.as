@@ -147,6 +147,11 @@ package
          return this.live;
       }
 
+      public function get owing() : Boolean
+      {
+         return this.used.length > 0 || this.saying.length > 0 || this.later.length > 0;
+      }
+
       public function hears(section:String) : Boolean
       {
          return this.ears.indexOf(section == null ? "" : section.toLowerCase()) >= 0;
