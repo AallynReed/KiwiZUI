@@ -239,6 +239,29 @@ def quoted(values: list, indent: str) -> str:
     return "\n".join(out)
 
 
+PART = 800
+
+
+def statements(name: str, cells: list) -> tuple[str, str]:
+    """A table written out as one assignment per row rather than as one literal. A literal
+    pushes every row onto Iggy's operand stack before it builds the table, and a class
+    whose initialiser goes deep enough never loads; an assignment pushes one row. The rows
+    are cut into methods of PART so no one body is longer than anything known to run."""
+    fill = f"{name.lower()}Parts"
+    head = [f"      private static function {fill}() : Array", "      {",
+            "         var t:Array = [];"]
+    parts = []
+    for i in range(0, len(cells), PART):
+        part = f"{fill}{i // PART}"
+        head.append(f"         {part}(t);")
+        parts.append("\n".join([f"      private static function {part}(t:Array) : void", "      {"]
+                               + [f"         t[{i + n}] = {literal(cell)};"
+                                  for n, cell in enumerate(cells[i:i + PART])]
+                               + ["      }"]))
+    head += ["         return t;", "      }"]
+    return f"{fill}()", "\n".join(head) + "\n\n" + "\n\n".join(parts)
+
+
 HEAD = '''package
 {
    public class Fish
@@ -728,10 +751,9 @@ def main() -> None:
                 + quoted(pools, "         ") + "];\n")
     body.append("      private static const POLE:Array = [\n"
                 + quoted(poles, "         ") + "];\n")
-    body.append("      private static const TABLE:Array = [\n"
-                + quoted(rows, "         ") + "];\n")
-    body.append("      private static const MOUNTED:Array = [\n"
-                + quoted(mounted, "         ") + "];\n")
+    for name, cells in (("TABLE", rows), ("MOUNTED", mounted)):
+        call, fill = statements(name, cells)
+        body.append(f"\n      private static const {name}:Array = {call};\n\n{fill}\n")
     body.append(TAIL)
     OUT.write_text("".join(body), encoding="utf-8")
     print(f"{OUT.name}: {len(rows)} fish, {len(mounted)} trophies, {len(liquids)} liquids, "
