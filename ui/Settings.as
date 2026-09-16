@@ -57,7 +57,9 @@ package ui
 
       private var body:Sprite = new Sprite();
 
-      private var rail:Shape = new Shape();
+      private var face:Shape = new Shape();
+
+      private var bar:Scrollbar = new Scrollbar();
 
       private var titleText:TextField;
 
@@ -93,6 +95,7 @@ package ui
          addChild(this.panel);
          addEventListener(MouseEvent.CLICK,this.onOutside);
 
+         this.panel.addChild(this.face);
          this.titleText = renderer.label(PAD,0,14,TextFieldAutoSize.LEFT,"SETTINGS",200,24,false,true);
          this.panel.addChild(this.titleText);
          this.closeBtn.text = "\u00D7";
@@ -100,8 +103,10 @@ package ui
          this.panel.addChild(this.closeBtn);
          this.clip.addChild(this.body);
          this.panel.addChild(this.clip);
-         this.panel.addChild(this.rail);
+         this.bar.attach(this.panel);
+         this.bar.moved = this.onScrolled;
          this.panel.addEventListener(MouseEvent.MOUSE_WHEEL,this.onWheel);
+         this.panel.addEventListener(MouseEvent.MOUSE_DOWN,this.onPanelDown);
 
          this.options = this.accented(options);
          this.listen();
@@ -169,15 +174,13 @@ package ui
          host.addChild(this);
          this.paint();
          Option.watch(this.stage,true);
-         if(this.drives)
-         {
-            addEventListener(Event.ENTER_FRAME,this.onTick);
-         }
+         addEventListener(Event.ENTER_FRAME,this.onTick);
       }
 
       public function hide() : void
       {
          removeEventListener(Event.ENTER_FRAME,this.onTick);
+         this.bar.release();
          Layer.hide();
          Option.watch(this.stage,false);
          if(this.parent != null)
@@ -294,10 +297,10 @@ package ui
          this.panel.y = this.anchored ? this.top
                       : (this.grounded ? this.top + this.high - deep
                                        : this.top + (this.high - deep) / 2);
-         this.panel.graphics.clear();
-         renderer.framed(this.panel,0,0,this.wide,deep,renderer.PANEL,renderer.BORDER,1);
-         renderer.fill(this.panel,1,1,this.wide - 2,HEAD - 1,renderer.HEADER,1);
-         renderer.fill(this.panel,1,HEAD,this.wide - 2,1,renderer.CYAN,0.85);
+         this.face.graphics.clear();
+         renderer.framed(this.face,0,0,this.wide,deep,renderer.PANEL,renderer.BORDER,1);
+         renderer.fill(this.face,1,1,this.wide - 2,HEAD - 1,renderer.HEADER,1);
+         renderer.fill(this.face,1,HEAD,this.wide - 2,1,renderer.CYAN,0.85);
 
          this.titleText.textColor = renderer.VALUE;
          renderer.centre(this.titleText,0,HEAD);
@@ -326,17 +329,22 @@ package ui
 
       private function paintRail(view:int) : void
       {
-         var run:int = Math.max(20,view * view / this.content);
-         this.rail.graphics.clear();
-         if(this.content <= view)
-         {
-            return;
-         }
-         this.rail.x = this.wide - 7;
-         this.rail.y = HEAD + PAD;
-         renderer.fill(this.rail,0,0,3,view,renderer.HEADER,1);
-         renderer.fill(this.rail,0,this.scroll * (view - run) / (this.content - view),
-                       3,run,renderer.LABEL,1);
+         this.bar.x = this.wide - Scrollbar.W - 2;
+         this.bar.y = HEAD + PAD;
+         this.bar.fit(view,this.content,this.scroll);
+      }
+
+      private function onScrolled(at:Number) : void
+      {
+         var view:int = this.view;
+         this.scroll = Config.clamp(at,0,this.content - view,0);
+         this.clip.scrollRect = new Rectangle(0,this.scroll,innerOf(this.wide),view);
+         this.paintRail(view);
+      }
+
+      private function onPanelDown(e:MouseEvent) : void
+      {
+         this.bar.press(this.panel.globalToLocal(new Point(e.stageX,e.stageY)));
       }
 
       private function onWheel(e:MouseEvent) : void
@@ -404,6 +412,11 @@ package ui
          var i:int = 0;
          this.here.x = this.panel.mouseX;
          this.here.y = this.panel.mouseY;
+         this.bar.hover(this.here);
+         if(!this.drives)
+         {
+            return;
+         }
          while(i < this.options.length)
          {
             option = this.options[i] as Option;
