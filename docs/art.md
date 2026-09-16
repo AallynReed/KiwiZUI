@@ -122,6 +122,33 @@ Two things the harness will not tell you, both of which cost a cycle:
   not exist in Iggy. Add the directory to
   `%APPDATA%\Macromedia\Flash Player\#Security\FlashPlayerTrust\`.
 
+## Controller buttons
+
+`padart.py` is a graft you do not have to write. It takes every `btn_console_*` button
+out of `ui/uixbshared.swf` - the library the PC client loads for a gamepad, the only one
+of the four `ui*shared.swf` files `Trove_x64.exe` names - and puts them in your build as
+one clip bound to `PadArt`, a labelled frame per button:
+
+```python
+sys.path.insert(0, str(LIB))
+import padart
+raw = padart.graft(raw, HERE / "uixbshared.vanilla.swf")
+if padart.labels(raw) != padart.BUTTONS:
+    raise SystemExit("the pad art did not graft")
+```
+
+Run it after any other graft. It renumbers its characters above the highest id already in
+the SWF, so it cannot collide with art another graft put there.
+
+```actionscript
+var a:Pad = new Pad();
+a.button(Pad.SOUTH, 18);
+```
+
+The names are vanilla's own, by position rather than by letter, so `SOUTH` is A and
+`EAST` is B. A PC screen that shows these should also carry the `$..._ButtonLegend`
+string vanilla puts beside the same button.
+
 ## The rule
 
 Never redraw art the game already has. It was drawn to mean something, and a substitute
