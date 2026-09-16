@@ -20,6 +20,11 @@ package ui
 
       public static const INNER:int = W - PAD * 2;
 
+      public static function innerOf(wide:int) : int
+      {
+         return wide - PAD * 2;
+      }
+
       private static const GAP:int = 8;
 
       private static const HEAD:int = 38;
@@ -33,6 +38,8 @@ package ui
       public var bare:Boolean = false;
 
       public var sticky:Boolean = false;
+
+      public var cap:int = 0;
 
       public var key:String = "";
 
@@ -54,6 +61,8 @@ package ui
 
       private var options:Array;
 
+      private var wide:int = W;
+
       private var span:int;
 
       private var high:int;
@@ -70,11 +79,12 @@ package ui
 
       private var here:Point = new Point();
 
-      public function Settings(span:int, high:int, options:Array)
+      public function Settings(span:int, high:int, options:Array, wide:int = W)
       {
          super();
          this.span = span;
          this.high = high;
+         this.wide = wide;
          addChild(this.scrim);
          addChild(this.panel);
          addEventListener(MouseEvent.CLICK,this.onOutside);
@@ -119,7 +129,7 @@ package ui
             }
             i++;
          }
-         out.splice(at,0,new Picker("accent","Accent",INNER));
+         out.splice(at,0,new Picker("accent","Accent",innerOf(this.wide)));
          return out;
       }
 
@@ -263,7 +273,8 @@ package ui
 
       private function get view() : int
       {
-         return Math.min(this.content,this.high - MARGIN - HEAD - PAD * 2);
+         var room:int = this.cap > 0 ? Math.min(this.cap,this.high) : this.high;
+         return Math.min(this.content,room - MARGIN - HEAD - PAD * 2);
       }
 
       public function paint() : void
@@ -275,16 +286,16 @@ package ui
          var i:int = 0;
          this.scrim.graphics.clear();
          renderer.fill(this.scrim,this.left,this.top,this.span,this.high,renderer.BLACK,SCRIM);
-         this.panel.x = this.left + (this.span - W) / 2;
+         this.panel.x = this.left + (this.span - this.wide) / 2;
          this.panel.y = this.anchored ? this.top : this.top + (this.high - deep) / 2;
          this.panel.graphics.clear();
-         renderer.framed(this.panel,0,0,W,deep,renderer.PANEL,renderer.BORDER,1);
-         renderer.fill(this.panel,1,1,W - 2,HEAD - 1,renderer.HEADER,1);
-         renderer.fill(this.panel,1,HEAD,W - 2,1,renderer.CYAN,0.85);
+         renderer.framed(this.panel,0,0,this.wide,deep,renderer.PANEL,renderer.BORDER,1);
+         renderer.fill(this.panel,1,1,this.wide - 2,HEAD - 1,renderer.HEADER,1);
+         renderer.fill(this.panel,1,HEAD,this.wide - 2,1,renderer.CYAN,0.85);
 
          this.titleText.textColor = renderer.VALUE;
          renderer.centre(this.titleText,0,HEAD);
-         this.closeBtn.x = W - PAD - 24;
+         this.closeBtn.x = this.wide - PAD - 24;
          this.closeBtn.y = (HEAD - 24) / 2;
          this.closeBtn.paint();
 
@@ -303,7 +314,7 @@ package ui
          this.scroll = Config.clamp(this.scroll,0,this.content - view,0);
          this.clip.x = PAD;
          this.clip.y = HEAD + PAD;
-         this.clip.scrollRect = new Rectangle(0,this.scroll,INNER,view);
+         this.clip.scrollRect = new Rectangle(0,this.scroll,innerOf(this.wide),view);
          this.paintRail(view);
       }
 
@@ -315,7 +326,7 @@ package ui
          {
             return;
          }
-         this.rail.x = W - 7;
+         this.rail.x = this.wide - 7;
          this.rail.y = HEAD + PAD;
          renderer.fill(this.rail,0,0,3,view,renderer.HEADER,1);
          renderer.fill(this.rail,0,this.scroll * (view - run) / (this.content - view),

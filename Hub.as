@@ -88,6 +88,38 @@ package
          return this;
       }
 
+      public function specs() : Array
+      {
+         var row:Array = null;
+         var out:Array = [];
+         var i:int = 0;
+         while(i < this.options.length)
+         {
+            row = this.options[i] as Array;
+            out.push(spec(String(row[0]),String(row[1]),String(row[2]),
+                          this.valueOf(String(row[0])),String(row[3]),String(row[4])));
+            i++;
+         }
+         return out;
+      }
+
+      public function values() : Object
+      {
+         var row:Array = null;
+         var out:Object = {};
+         var i:int = 0;
+         while(i < this.options.length)
+         {
+            row = this.options[i] as Array;
+            if(String(row[0]).length > 0)
+            {
+               out[String(row[0])] = this.valueOf(String(row[0]));
+            }
+            i++;
+         }
+         return out;
+      }
+
       public function slug() : String
       {
          return flatten(this.title) + "__" + flatten(stem(this.section));
