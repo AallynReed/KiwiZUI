@@ -41,6 +41,8 @@ package ui
 
       public var cap:int = 0;
 
+      public var nudge:int = 0;
+
       public var key:String = "";
 
       public var literal:String = "";
@@ -286,7 +288,7 @@ package ui
          var i:int = 0;
          this.scrim.graphics.clear();
          renderer.fill(this.scrim,this.left,this.top,this.span,this.high,renderer.BLACK,SCRIM);
-         this.panel.x = this.left + (this.span - this.wide) / 2;
+         this.panel.x = this.left + (this.span - this.wide) / 2 + this.nudge;
          this.panel.y = this.anchored ? this.top : this.top + (this.high - deep) / 2;
          this.panel.graphics.clear();
          renderer.framed(this.panel,0,0,this.wide,deep,renderer.PANEL,renderer.BORDER,1);
