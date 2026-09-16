@@ -280,8 +280,8 @@ package ui
 
       private function get view() : int
       {
-         var room:int = this.cap > 0 ? Math.min(this.cap,this.high) : this.high;
-         return Math.min(this.content,room - MARGIN - HEAD - PAD * 2);
+         var room:int = this.cap > 0 ? Math.min(this.cap,this.high - MARGIN) : this.high - MARGIN;
+         return Math.min(this.content,room - HEAD - PAD * 2);
       }
 
       public function paint() : void
