@@ -43,6 +43,8 @@ package ui
 
       public var nudge:int = 0;
 
+      public var grounded:Boolean = false;
+
       public var key:String = "";
 
       public var literal:String = "";
@@ -289,7 +291,9 @@ package ui
          this.scrim.graphics.clear();
          renderer.fill(this.scrim,this.left,this.top,this.span,this.high,renderer.BLACK,SCRIM);
          this.panel.x = this.left + (this.span - this.wide) / 2 + this.nudge;
-         this.panel.y = this.anchored ? this.top : this.top + (this.high - deep) / 2;
+         this.panel.y = this.anchored ? this.top
+                      : (this.grounded ? this.top + this.high - deep
+                                       : this.top + (this.high - deep) / 2);
          this.panel.graphics.clear();
          renderer.framed(this.panel,0,0,this.wide,deep,renderer.PANEL,renderer.BORDER,1);
          renderer.fill(this.panel,1,1,this.wide - 2,HEAD - 1,renderer.HEADER,1);
