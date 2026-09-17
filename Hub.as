@@ -8,7 +8,7 @@ package
    public class Hub
    {
 
-      public static const ADDRESS:String = "likedworlds.swf";
+      public static const ADDRESS:String = "settings.swf";
 
       public static const VERSION:String = "3";
 

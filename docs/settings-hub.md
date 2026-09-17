@@ -15,13 +15,13 @@ the `.cfg` of whichever mod packs that SWF, and Trove relays it back to that mod
 its own `loadModConfiguration`.
 
 ```actionscript
-ExternalInterface.call("UIComponent.OnSaveConfig", "likedworlds.swf", key, value);
+ExternalInterface.call("UIComponent.OnSaveConfig", "settings.swf", key, value);
 ```
 
 That is the only channel between two mods there is. Nothing can *ask* for a section that
 is not its own — it can only write into one.
 
-The hub's address is `likedworlds.swf`.
+The hub's address is `settings.swf`, the Mod Settings category of Zakros UI - Settings.
 
 ## Declaring, the short way
 

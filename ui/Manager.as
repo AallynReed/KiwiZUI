@@ -42,6 +42,8 @@ package ui
 
       public var aside:Function;
 
+      public var docked:Boolean = false;
+
       public var swf:String = "";
 
       public var key:String = "";
@@ -381,7 +383,7 @@ package ui
          this.covered = [];
          this.ticker = host;
          this.resume();
-         while(i < host.numChildren)
+         while(!this.docked && i < host.numChildren)
          {
             kid = host.getChildAt(i);
             if(kid.visible)
@@ -391,10 +393,16 @@ package ui
             }
             i++;
          }
-         Layer.frame(this.span,this.high);
+         if(!this.docked)
+         {
+            Layer.frame(this.span,this.high);
+         }
          host.addChild(this);
          this.rebuild();
-         Option.watch(this.stage,true);
+         if(!this.docked)
+         {
+            Option.watch(this.stage,true);
+         }
       }
 
       public function hide() : void
@@ -405,7 +413,10 @@ package ui
          this.pickRail.release();
          Layer.hide();
          Option.hideTip();
-         Option.watch(this.stage,false);
+         if(!this.docked)
+         {
+            Option.watch(this.stage,false);
+         }
          while(i < this.covered.length)
          {
             (this.covered[i] as DisplayObject).visible = true;
@@ -594,10 +605,14 @@ package ui
          renderer.fill(this.panelBox,0,0,this.span,HEAD,renderer.HEADER,1);
          renderer.fill(this.panelBox,0,HEAD,this.span,1,renderer.CYAN,0.85);
          renderer.fill(this.panelBox,LEFT,HEAD + 1,1,this.high - HEAD - 1,renderer.BORDER,0.5);
-         renderer.border(this.panelBox,0,0,this.span,this.high,renderer.ROW);
+         if(!this.docked)
+         {
+            renderer.border(this.panelBox,0,0,this.span,this.high,renderer.ROW);
+         }
 
          this.titleField.textColor = renderer.VALUE;
          renderer.centre(this.titleField,0,HEAD);
+         this.closeBtn.visible = !this.docked;
          this.closeBtn.x = this.span - PAD - BTN;
          this.closeBtn.y = (HEAD - BTN) / 2;
          this.closeBtn.paint();
@@ -1133,7 +1148,7 @@ package ui
             this.search.press(new Point(this.panel.mouseX,this.panel.mouseY));
             return;
          }
-         if(this.holds(this.closeBtn))
+         if(this.closeBtn.visible && this.holds(this.closeBtn))
          {
             this.onDismiss(e);
          }
@@ -1155,7 +1170,7 @@ package ui
          this.search.lit(at);
          this.pickRail.hover(at);
          this.rail.hover(at);
-         var closeHot:Boolean = live && this.holds(this.closeBtn);
+         var closeHot:Boolean = live && this.closeBtn.visible && this.holds(this.closeBtn);
          var readHot:Boolean = live && this.readBtn.visible && this.holds(this.readBtn);
          var asideHot:Boolean = live && this.asideBtn.visible && this.holds(this.asideBtn);
          if(closeHot != this.closeBtn.hovered)
