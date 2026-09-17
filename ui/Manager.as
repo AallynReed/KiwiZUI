@@ -103,7 +103,7 @@ package ui
 
       private var readField:TextField;
 
-      private var reading:Boolean = false;
+      public var reading:Boolean = false;
 
       private var reported:Boolean = false;
 
@@ -166,19 +166,16 @@ package ui
          this.body.addChild(this.readField);
          this.search.driven = true;
          this.search.x = PAD;
-         this.search.y = HEAD + PAD;
          this.search.addEventListener(Event.CHANGE,this.onFind);
          this.panel.addChild(this.search);
-         this.missField = renderer.label(PAD,HEAD + PAD + FIND,11,TextFieldAutoSize.LEFT,
+         this.missField = renderer.label(PAD,0,11,TextFieldAutoSize.LEFT,
                                          IggyFunctions.translate("$Marketplace_NoResults"),
                                          LEFT - PAD * 2,32,true);
          this.panel.addChild(this.missField);
          this.pickClip.addChild(this.picks);
-         this.pickClip.y = HEAD + PAD + FIND;
          this.panel.addChild(this.pickClip);
          this.clip.addChild(this.body);
          this.clip.x = LEFT + PAD;
-         this.clip.y = HEAD + PAD;
          this.panel.addChild(this.clip);
          this.pickRail.attach(this.panel);
          this.pickRail.moved = this.slidePicks;
@@ -539,9 +536,14 @@ package ui
          return this.span - LEFT - PAD * 2 - 8;
       }
 
+      private function get head() : int
+      {
+         return this.docked ? 0 : HEAD;
+      }
+
       private function get view() : int
       {
-         return this.high - HEAD - PAD * 2;
+         return this.high - this.head - PAD * 2;
       }
 
       private function get picksView() : int
@@ -582,6 +584,18 @@ package ui
          return this.reading && this.story.length > 0;
       }
 
+      public function get readable() : Boolean
+      {
+         return this.story.length > 0;
+      }
+
+      public function retell() : void
+      {
+         this.reading = !this.reading;
+         this.scroll = 0;
+         this.rebuild();
+      }
+
       private function get content() : int
       {
          var total:int = 0;
@@ -602,26 +616,32 @@ package ui
       {
          this.panelBox.graphics.clear();
          renderer.fill(this.panelBox,0,0,this.span,this.high,renderer.PANEL,1);
-         renderer.fill(this.panelBox,0,0,this.span,HEAD,renderer.HEADER,1);
-         renderer.fill(this.panelBox,0,HEAD,this.span,1,renderer.CYAN,0.85);
-         renderer.fill(this.panelBox,LEFT,HEAD + 1,1,this.high - HEAD - 1,renderer.BORDER,0.5);
          if(!this.docked)
          {
+            renderer.fill(this.panelBox,0,0,this.span,HEAD,renderer.HEADER,1);
+            renderer.fill(this.panelBox,0,HEAD,this.span,1,renderer.CYAN,0.85);
             renderer.border(this.panelBox,0,0,this.span,this.high,renderer.ROW);
          }
+         renderer.fill(this.panelBox,LEFT,this.head + 1,1,this.high - this.head - 1,
+                       renderer.BORDER,0.5);
+         this.search.y = this.head + PAD;
+         this.missField.y = this.head + PAD + FIND;
+         this.pickClip.y = this.head + PAD + FIND;
+         this.clip.y = this.head + PAD;
 
+         this.titleField.visible = !this.docked;
          this.titleField.textColor = renderer.VALUE;
          renderer.centre(this.titleField,0,HEAD);
          this.closeBtn.visible = !this.docked;
          this.closeBtn.x = this.span - PAD - BTN;
          this.closeBtn.y = (HEAD - BTN) / 2;
          this.closeBtn.paint();
-         this.readBtn.visible = this.story.length > 0;
+         this.readBtn.visible = !this.docked && this.story.length > 0;
          this.readBtn.x = this.leftOf(this.closeBtn);
          this.readBtn.y = this.closeBtn.y;
          this.readBtn.on = this.reading;
          this.readBtn.paint();
-         this.asideBtn.visible = this.aside != null;
+         this.asideBtn.visible = !this.docked && this.aside != null;
          this.asideBtn.mark = this.aside;
          this.asideBtn.tipTitle = this.asideTitle;
          this.asideBtn.tip = this.asideTip;
@@ -716,7 +736,7 @@ package ui
                                         Math.max(0,this.picksDeep - view),0);
          this.pickClip.scrollRect = new Rectangle(0,this.pickScroll,LEFT,view);
          this.pickRail.x = LEFT - Scrollbar.W;
-         this.pickRail.y = HEAD + PAD + FIND;
+         this.pickRail.y = this.head + PAD + FIND;
          this.pickRail.fit(view,this.picksDeep,this.pickScroll);
       }
 
@@ -791,7 +811,7 @@ package ui
          this.scroll = Config.clamp(where,0,Math.max(0,this.content - view),0);
          this.clip.scrollRect = new Rectangle(0,this.scroll,this.inner,view);
          this.rail.x = this.span - Scrollbar.W;
-         this.rail.y = HEAD + PAD;
+         this.rail.y = this.head + PAD;
          this.rail.fit(view,this.content,this.scroll);
       }
 
@@ -799,9 +819,7 @@ package ui
       {
          Option.click();
          Option.hideTip();
-         this.reading = !this.reading;
-         this.scroll = 0;
-         this.rebuild();
+         this.retell();
       }
 
       private function onFind(e:Event) : void
@@ -829,6 +847,7 @@ package ui
          this.scroll = 0;
          this.reading = false;
          this.rebuild();
+         dispatchEvent(new Event(Event.SELECT));
       }
 
       private function onWheel(e:MouseEvent) : void
@@ -1143,7 +1162,7 @@ package ui
 
       private function onHeadClick(e:MouseEvent) : void
       {
-         if(this.panel.mouseY >= HEAD)
+         if(this.panel.mouseY >= this.head)
          {
             this.search.press(new Point(this.panel.mouseX,this.panel.mouseY));
             return;
@@ -1166,7 +1185,7 @@ package ui
       private function onHeadHover(e:MouseEvent) : void
       {
          var at:Point = new Point(this.panel.mouseX,this.panel.mouseY);
-         var live:Boolean = at.y < HEAD;
+         var live:Boolean = at.y < this.head;
          this.search.lit(at);
          this.pickRail.hover(at);
          this.rail.hover(at);
