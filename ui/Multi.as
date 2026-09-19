@@ -10,11 +10,11 @@ package ui
       private var allText:String;
 
       public function Multi(key:String, text:String, w:int, values:Array, labels:Array = null,
-                            noneText:String = "None", allText:String = "All")
+                            noneText:String = null, allText:String = null)
       {
          super(key,text,w,values,labels);
-         this.noneText = noneText;
-         this.allText = allText;
+         this.noneText = noneText == null ? "None" : noneText;
+         this.allText = allText == null ? "All" : allText;
          this.boxes = true;
          var i:int = 0;
          while(i < values.length)

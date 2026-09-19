@@ -44,6 +44,8 @@ package
 
       private static const QUIET:int = 1500;
 
+      public static var words:Object = {};
+
       private var section:String;
 
       private var title:String;
@@ -353,9 +355,37 @@ package
             i++;
          }
          return {"swf":parts[1],"title":parts[2],"options":options,
-                 "readme":era < 3 ? "" : String(parts[4]),
-                 "group":named(old || String(parts[3]).length == 0
-                             ? stem(String(parts[1])) : String(parts[3]))};
+                 "readme":era < 3 ? "" : word(String(parts[4])),
+                 "group":word(named(old || String(parts[3]).length == 0
+                                  ? stem(String(parts[1])) : String(parts[3])))};
+      }
+
+      public static function word(text:String) : String
+      {
+         var said:Array = null;
+         if(text == null || Tongue.at == 0)
+         {
+            return text;
+         }
+         said = words[text] as Array;
+         return said == null ? text : String(said[Tongue.at - 1]);
+      }
+
+      private static function tokens(params:String) : String
+      {
+         var parts:Array = null;
+         var i:int = 0;
+         if(params == null || params.length == 0 || Tongue.at == 0 || words[params] is Array)
+         {
+            return word(params);
+         }
+         parts = params.split(",");
+         while(i < parts.length)
+         {
+            parts[i] = word(String(parts[i]));
+            i++;
+         }
+         return parts.join(",");
       }
 
       private static function named(text:String) : String
@@ -374,9 +404,10 @@ package
       {
          var range:Array = null;
          var type:String = String(field[1]);
-         var params:String = field.length > 4 ? String(field[4]) : "";
-         var out:Object = {"key":field[0],"type":type,"label":field[2],"value":field[3],
-                           "note":field.length > 5 ? field[5] : "","emit":"","choices":[],
+         var params:String = field.length > 4 ? tokens(String(field[4])) : "";
+         var out:Object = {"key":field[0],"type":type,"label":word(String(field[2])),
+                           "value":field[3],
+                           "note":field.length > 5 ? word(String(field[5])) : "","emit":"","choices":[],
                            "min":0,"max":100,"step":1,"places":0,"zero":"","suffix":"",
                            "len":0,"prompt":""};
          if(type == SLIDER || type == SPIN || type == STEPPER)

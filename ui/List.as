@@ -94,12 +94,12 @@ package ui
 
       private var hotClose:Boolean = false;
 
-      public function List(key:String, text:String, w:int, prompt:String = PROMPT,
-                           noneText:String = NONE)
+      public function List(key:String, text:String, w:int, prompt:String = null,
+                           noneText:String = null)
       {
          super(key,text,w);
-         this.prompt = prompt;
-         this.noneText = noneText;
+         this.prompt = prompt == null ? PROMPT : prompt;
+         this.noneText = noneText == null ? NONE : noneText;
          this.face = renderer.pin(renderer.label(0,0,12,TextFieldAutoSize.LEFT,"",CTRL - 34,20),CTRL - 34,12);
          addChild(this.face);
          mouseChildren = false;
