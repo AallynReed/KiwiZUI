@@ -5,9 +5,9 @@ package
    public class Tongue
    {
 
-      public static const LOCALES:Array = ["en","zh"];
+      public static const LOCALES:Array = ["en","zh","de","es","fr","pt","ru"];
 
-      public static const NAMES:Array = ["English","Zhongwen"];
+      public static const NAMES:Array = ["English","Zhongwen","Deutsch","Español","Français","Português","Русский"];
 
       private static var known:int = -1;
 

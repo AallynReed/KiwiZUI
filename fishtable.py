@@ -585,7 +585,8 @@ PLAIN, LEAST, RECORD, HAIR, WHOLE, NOTHING = range(6)
 QUOTED = r'"((?:[^"\\]|\\.)*)"'
 STRING = re.compile(QUOTED)
 COMMA = r"\s*,\s*"
-PICKED = r'(?:Tongue\.at\s*==\s*\d+\s*\?\s*"(?:[^"\\]|\\.)*"\s*:\s*)*' + QUOTED
+PICKED = (r'(?:\(?\s*Tongue\s*\.at\s*==\s*\d+\s*\?\s*"(?:[^"\\]|\\.)*"\s*:\s*)*' + QUOTED
+          + r'\)*')
 ROW = re.compile(r"\[\s*" + COMMA.join([QUOTED] + [r"(\d+)"] * 5 + [r"(true|false)", PICKED, PICKED])
                  + r"\s*\]")
 MOUNT = re.compile(r'\[\s*"(\$prefabs_placeable_deco_trophy_fish_[A-Za-z0-9_]+)"' + COMMA
