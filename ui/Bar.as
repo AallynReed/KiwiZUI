@@ -22,12 +22,21 @@ package ui
 
       private var run:Shape = new Shape();
 
+      private var ghost:Shape = new Shape();
+
+      private var have:int = 0;
+
+      private var need:int = 0;
+
+      private var next:int = 0;
+
       public function Bar(w:int)
       {
          super();
          this.w = w;
          addChild(this.track);
          addChild(this.run);
+         addChild(this.ghost);
          this.valueText = renderer.label(w + 4,0,11.5,TextFieldAutoSize.LEFT,"~ / ~",w,30);
          renderer.centre(this.valueText,0,H);
          addChild(this.valueText);
@@ -50,10 +59,36 @@ package ui
       public function setBar(have:int, need:int) : void
       {
          var fraction:Number = need <= 0 ? 0 : have / need;
+         this.have = have;
+         this.need = need;
          this.valueText.visible = this.showValue;
          renderer.say(this.valueText,have + " / " + need);
          this.valueText.textColor = renderer.rampFor(fraction);
          this.fillRun(fraction,renderer.blend(renderer.YELLOW,renderer.VALUE,0.4),renderer.YELLOW);
+         this.drawNext();
+      }
+
+      public function setNext(add:int) : void
+      {
+         this.next = add;
+         this.drawNext();
+      }
+
+      private function drawNext() : void
+      {
+         var from:int = this.spanOf(this.have);
+         var to:int = this.spanOf(this.have + this.next);
+         this.ghost.graphics.clear();
+         if(this.next > 0 && to > from)
+         {
+            renderer.fill(this.ghost,from,0,to - from,H,renderer.shade(renderer.YELLOW,45));
+         }
+      }
+
+      private function spanOf(value:int) : int
+      {
+         var fraction:Number = this.need <= 0 ? 0 : value / this.need;
+         return this.w * (fraction < 0 ? 0 : (fraction > 1 ? 1 : fraction));
       }
 
       private function fillRun(fraction:Number, top:uint, bottom:uint) : void
