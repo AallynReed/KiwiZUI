@@ -32,8 +32,10 @@ package
          [[[16,210,280],[3 / 14,560 / 3,770 / 3],[0.3 / 14,560 / 3,770 / 3],[0.5,245,315],[50,245,315],[5 / 7,280,385]],
           [[16,245,350],[3 / 14,700 / 3,910 / 3],[0.3 / 14,700 / 3,910 / 3],[0.5,315,385],[50,315,385],[5 / 7,350,420]]],
          [[[168 / 9,270,360],[2.5 / 9,187.2,297],[0.25 / 9,187.2,297],[5.25 / 9,315,405],[525 / 9,315,405],[5 / 9,495,585]],
-          [[28,210,300],[2.5 / 9,252,342],[0.25 / 9,252,342],[5.25 / 9,405,495],[525 / 9,405,495],[5 / 9,495,630]]]
+          [[28,210,300],[2.5 / 9,252,342],[0.25 / 9,252,342],[5.25 / 9,2790 / 7,495],[525 / 9,405,495],[5 / 9,495,630]]]
       ];
+
+      private static const COSMIC_BANDS:Array = [[3,1,3,[5.25 / 9,405,495]]];
 
       private static var labels:Array = null;
 
@@ -192,7 +194,7 @@ package
 
       public function projectAt(i:int, extra:int = 0) : String
       {
-         var band:Array = BANDS[_tier][_socket][int(columns[i])] as Array;
+         var band:Array = bandAt(_socket,int(columns[i]));
          var scaled:Number = Number(band[1]) + (Number(band[2]) - Number(band[1])) * Number(rolls[i]);
          var value:Number = Number(band[0])
                           * (scaled * (int(boosts[i]) + 1 + extra) + lift(maxLevel));
@@ -359,7 +361,6 @@ package
       {
          var i:int = 0;
          var band:Array = null;
-         var table:Array = BANDS[_tier][socket] as Array;
          var pr:Array = PR_BANDS[_tier][socket] as Array;
          prLow = Number(pr[0]);
          prSpan = Number(pr[1]) - prLow;
@@ -372,13 +373,32 @@ package
          lead.length = 0;
          while(i < columns.length)
          {
-            band = table[int(columns[i])] as Array;
+            band = bandAt(socket,int(columns[i]));
             low.push(Number(band[1]));
             wide.push(Number(band[2]) - Number(band[1]));
             giveNum.push(step(int(places[i])) / 2 / Number(band[0]));
             lead.push(Number(printed[i]) / Number(band[0]) - raise);
             i++;
          }
+      }
+
+      private function bandAt(socket:int, column:int) : Array
+      {
+         var i:int = 0;
+         var row:Array = null;
+         if(columns.indexOf(LIGHT) != -1)
+         {
+            while(i < COSMIC_BANDS.length)
+            {
+               row = COSMIC_BANDS[i] as Array;
+               if(int(row[0]) == _tier && int(row[1]) == socket && int(row[2]) == column)
+               {
+                  return row[3] as Array;
+               }
+               i++;
+            }
+         }
+         return BANDS[_tier][socket][column] as Array;
       }
 
       private function measure(want:Array) : Boolean
