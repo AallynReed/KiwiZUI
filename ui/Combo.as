@@ -37,6 +37,8 @@ package ui
        *  to be worth that. */
       public var hunts:Boolean = false;
 
+      public var clears:int = -1;
+
       private var face:TextField;
 
       private var menu:Sprite;
@@ -73,6 +75,7 @@ package ui
          addEventListener(MouseEvent.ROLL_OVER,this.onHover);
          addEventListener(MouseEvent.ROLL_OUT,this.onHover);
          addEventListener(MouseEvent.CLICK,this.onFace);
+         addEventListener(MouseEvent.RIGHT_CLICK,this.onRight);
       }
 
       override public function get literal() : String
@@ -129,6 +132,16 @@ package ui
          this.choose(0);
       }
 
+      public function get clearable() : Boolean
+      {
+         return this.clears >= 0 && this.clears < this.values.length && this.index != this.clears;
+      }
+
+      private function get crossAt() : int
+      {
+         return this.w - BOX - 8;
+      }
+
       public function marked(i:int) : Boolean
       {
          return i == this.index;
@@ -150,8 +163,9 @@ package ui
          this.box.graphics.clear();
          renderer.fill(this.box,0,0,this.w,this.tall,renderer.PANEL,0);
          renderer.framed(this.box,this.lane,mid,this.ctrl,BOX,renderer.HEADER,edge,1);
-         renderer.pin(this.face,this.ctrl - 34,12);
+         renderer.pin(this.face,this.ctrl - (this.clearable ? 52 : 34),12);
          this.caret(this.w - 1,mid,this.hot ? renderer.CYAN : renderer.LABEL);
+         this.cross(this.crossAt,mid + (BOX >> 1));
          this.captionAt(0,renderer.LABEL);
          this.face.x = this.lane + 8;
          renderer.centre(this.face,mid,BOX);
@@ -170,6 +184,20 @@ package ui
          this.box.graphics.lineTo(x + ARROW_W,y);
          this.box.graphics.lineTo(x + (ARROW_W >> 1),y + ARROW_H);
          this.box.graphics.endFill();
+      }
+
+      private function cross(x:int, y:int) : void
+      {
+         if(!this.clearable)
+         {
+            return;
+         }
+         this.box.graphics.lineStyle(2,this.hot ? renderer.VALUE : renderer.LABEL,1);
+         this.box.graphics.moveTo(x - 4,y - 4);
+         this.box.graphics.lineTo(x + 4,y + 4);
+         this.box.graphics.moveTo(x + 4,y - 4);
+         this.box.graphics.lineTo(x - 4,y + 4);
+         this.box.graphics.lineStyle();
       }
 
       public function get page() : int
@@ -200,6 +228,11 @@ package ui
 
       private function onFace(e:MouseEvent) : void
       {
+         if(this.clearable && Math.abs(this.mouseX - this.crossAt) <= 9)
+         {
+            this.onRight(e);
+            return;
+         }
          if(this.menu != null || Layer.shut(this))
          {
             Layer.hide();
@@ -213,6 +246,15 @@ package ui
             stage.focus = this.find;
          }
          this.paint();
+      }
+
+      private function onRight(e:MouseEvent) : void
+      {
+         if(this.clearable)
+         {
+            Option.click();
+            this.pick(this.clears);
+         }
       }
 
       private function build() : void
