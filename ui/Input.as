@@ -34,6 +34,8 @@ package ui
 
       private var hot:Boolean = false;
 
+      public var boxH:int = BOX;
+
       public var driven:Boolean = false;
 
       public var digits:Boolean = false;
@@ -130,7 +132,7 @@ package ui
 
       public function get boxTop() : int
       {
-         return (this.tall - BOX) / 2;
+         return (this.tall - this.boxH) / 2;
       }
 
       public function get value() : String
@@ -195,16 +197,16 @@ package ui
       {
          var at:int = this.boxAt;
          var wide:int = this.boxWide;
-         var mid:int = (this.tall - BOX) / 2;
+         var mid:int = (this.tall - this.boxH) / 2;
          var empty:Boolean = this.field.text.length == 0;
          this.box.graphics.clear();
          renderer.fill(this.box,0,0,this.w,this.tall,renderer.PANEL,0);
-         renderer.framed(this.box,at,mid,wide,BOX,renderer.HEADER,this.hot ? renderer.CYAN : renderer.BORDER,1);
+         renderer.framed(this.box,at,mid,wide,this.boxH,renderer.HEADER,this.hot ? renderer.CYAN : renderer.BORDER,1);
          this.captionAt(0,renderer.LABEL);
          this.place(this.field,at,wide,mid,renderer.VALUE);
          this.place(this.hint,at,wide,mid,renderer.LABEL);
          this.hint.visible = empty;
-         this.cross(at + wide - 10,mid + (BOX >> 1),this.clearable);
+         this.cross(at + wide - 10,mid + (this.boxH >> 1),this.clearable);
          if(this.key.length > 0)
          {
             this.apply.x = at + wide + 4;
@@ -224,7 +226,7 @@ package ui
          {
             f.setTextFormat(fmt);
          }
-         renderer.centre(f,mid,BOX);
+         renderer.centre(f,mid,this.boxH);
       }
 
       private function cross(x:int, y:int, on:Boolean) : void

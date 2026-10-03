@@ -35,6 +35,10 @@ package ui
 
       public var tint:uint = 0;
 
+      public var primary:Boolean = false;
+
+      public var ghost:Boolean = false;
+
       public var flagged:Boolean = false;
 
       public var frame:Shape = new Shape();
@@ -78,12 +82,28 @@ package ui
 
       public function paint() : void
       {
+         var accent:uint = this.tint != 0 ? this.tint : renderer.CYAN;
          this.frame.graphics.clear();
-         renderer.framed(this.frame,0,0,this.w,this.h,renderer.lift(renderer.BORDER,RIM),renderer.PANEL2);
          this.box.graphics.clear();
-         renderer.raised(this.box,2,2,this.w - 4,this.h - 4,renderer.RAISED2,renderer.RAISED6);
-         this.caption.textColor = !this.latched ? renderer.VALUE
-                                : (this.tint != 0 ? this.tint : renderer.CYAN);
+         if(this.primary)
+         {
+            renderer.framed(this.frame,0,0,this.w,this.h,accent,accent);
+            renderer.framed(this.box,2,2,this.w - 4,this.h - 4,accent,accent);
+            this.caption.textColor = renderer.RAISED2;
+         }
+         else if(this.ghost)
+         {
+            renderer.framed(this.frame,0,0,this.w,this.h,accent,renderer.PANEL2);
+            renderer.fill(this.box,2,2,this.w - 4,this.h - 4,renderer.PANEL2);
+            this.caption.textColor = accent;
+         }
+         else
+         {
+            renderer.framed(this.frame,0,0,this.w,this.h,renderer.lift(renderer.BORDER,RIM),renderer.PANEL2);
+            renderer.raised(this.box,2,2,this.w - 4,this.h - 4,renderer.RAISED2,renderer.RAISED6);
+            this.caption.textColor = !this.latched ? renderer.VALUE
+                                   : (this.tint != 0 ? this.tint : renderer.CYAN);
+         }
          this.face.graphics.clear();
          if(this.mark != null)
          {
