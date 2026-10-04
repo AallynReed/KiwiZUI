@@ -191,6 +191,15 @@ package
          }
       }
 
+      public function flush() : void
+      {
+         if(this.armed && this.dirty)
+         {
+            this.dirty = false;
+            this.record();
+         }
+      }
+
       private function record() : void
       {
          var line:String = this.declaration();

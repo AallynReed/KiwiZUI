@@ -42,6 +42,8 @@ package ui
 
       public var aside:Function;
 
+      public var custom:Function;
+
       public var docked:Boolean = false;
 
       public var swf:String = "";
@@ -130,6 +132,10 @@ package ui
       private var high:int;
 
       private var scroll:Number = 0;
+
+      private var pointer:Point = new Point();
+
+      private var away:Point = new Point(-1,-1);
 
       public function Manager(span:int, high:int)
       {
@@ -462,7 +468,7 @@ package ui
             j = 0;
             while(cat.open && j < specs.length)
             {
-               option = this.control(specs[j]);
+               option = this.control(specs[j],record);
                if(option != null)
                {
                   option.tip = String((specs[j] as Object).note);
@@ -471,6 +477,7 @@ package ui
                   option.from = String((specs[j] as Object).value);
                   option.addEventListener(Event.CHANGE,this.onChange);
                   option.addEventListener(Event.CLOSE,this.onShut);
+                  option.addEventListener(Event.RESIZE,this.onResized);
                   this.body.addChild(option);
                   this.rows.push(option);
                }
@@ -525,6 +532,7 @@ package ui
             option.removeEventListener(Event.CHANGE,this.onChange);
             option.removeEventListener(Event.CLOSE,this.onShut);
             option.removeEventListener(Event.SELECT,this.onFold);
+            option.removeEventListener(Event.RESIZE,this.onResized);
             this.body.removeChild(option);
             i++;
          }
@@ -568,9 +576,11 @@ package ui
          return out;
       }
 
-      private function control(spec:Object) : Option
+      private function control(spec:Object, record:Object) : Option
       {
-         return Widget.control(spec,this.inner);
+         var made:Option = this.custom == null ? null
+                         : this.custom(spec,record,this.inner) as Option;
+         return made != null ? made : Widget.control(spec,this.inner);
       }
 
       private function gapAfter(at:int) : int
@@ -1162,9 +1172,14 @@ package ui
 
       private function onHeadClick(e:MouseEvent) : void
       {
+         var at:Point = null;
          if(this.panel.mouseY >= this.head)
          {
-            this.search.press(new Point(this.panel.mouseX,this.panel.mouseY));
+            at = new Point(this.panel.mouseX,this.panel.mouseY);
+            if(!this.search.press(at))
+            {
+               this.claim(at);
+            }
             return;
          }
          if(this.closeBtn.visible && this.holds(this.closeBtn))
@@ -1189,6 +1204,7 @@ package ui
          this.search.lit(at);
          this.pickRail.hover(at);
          this.rail.hover(at);
+         this.light(at);
          var closeHot:Boolean = live && this.closeBtn.visible && this.holds(this.closeBtn);
          var readHot:Boolean = live && this.readBtn.visible && this.holds(this.readBtn);
          var asideHot:Boolean = live && this.asideBtn.visible && this.holds(this.asideBtn);
@@ -1204,6 +1220,60 @@ package ui
          {
             this.asideBtn.hovered = asideHot;
          }
+      }
+
+      private function claim(at:Point) : Boolean
+      {
+         var option:Option = null;
+         var i:int = 0;
+         if(!this.inView(at))
+         {
+            return false;
+         }
+         while(i < this.rows.length)
+         {
+            option = this.rows[i] as Option;
+            i++;
+            if(option.hovers && option.press(this.into(option,at)))
+            {
+               return true;
+            }
+         }
+         return false;
+      }
+
+      private function light(at:Point) : void
+      {
+         var option:Option = null;
+         var inside:Boolean = this.inView(at);
+         var i:int = 0;
+         while(i < this.rows.length)
+         {
+            option = this.rows[i] as Option;
+            i++;
+            if(option.hovers)
+            {
+               option.lit(inside ? this.into(option,at) : this.away);
+            }
+         }
+      }
+
+      private function inView(at:Point) : Boolean
+      {
+         return !this.told && at.x >= this.clip.x && at.y >= this.clip.y
+             && at.y < this.clip.y + this.view;
+      }
+
+      private function into(option:Option, at:Point) : Point
+      {
+         this.pointer.x = at.x - this.clip.x - option.x;
+         this.pointer.y = at.y - this.clip.y + this.scroll - option.y;
+         return this.pointer;
+      }
+
+      private function onResized(e:Event) : void
+      {
+         this.paintRows();
       }
 
       private function onDismiss(e:MouseEvent) : void
